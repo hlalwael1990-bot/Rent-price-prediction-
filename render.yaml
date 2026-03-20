@@ -8,6 +8,8 @@ services:
     autoDeploy: true
     healthCheckPath: /
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
       - key: FLASK_SECRET_KEY
         generateValue: true
       - key: PROJECT_LOGIN_PASSWORD

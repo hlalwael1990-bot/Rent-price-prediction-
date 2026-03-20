@@ -11,7 +11,8 @@ import joblib
 
 try:
     import shap
-except ImportError:
+except Exception as exc:
+    print("SHAP IMPORT ERROR:", exc)
     shap = None
 
 from flask import Flask, has_request_context, jsonify, redirect, render_template, request, session, url_for
