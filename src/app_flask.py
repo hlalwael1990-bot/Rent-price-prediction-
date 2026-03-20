@@ -9,12 +9,6 @@ import numpy as np
 import pandas as pd
 import joblib
 
-try:
-    import shap
-except Exception as exc:
-    print("SHAP IMPORT ERROR:", exc)
-    shap = None
-
 from flask import Flask, has_request_context, jsonify, redirect, render_template, request, session, url_for
 
 
@@ -1008,127 +1002,6 @@ inspect_trained_property_types()
 
 
 # =========================================================
-# SHAP setup
-# =========================================================
-shap_transformer = None
-shap_estimator = None
-shap_explainer = None
-
-
-def build_shap_components():
-    global shap_transformer, shap_estimator, shap_explainer
-
-    shap_transformer = None
-    shap_estimator = None
-    shap_explainer = None
-
-    if model is None or shap is None:
-        return
-
-    try:
-        if hasattr(model, "named_steps"):
-            step_items = list(model.named_steps.items())
-            step_values = list(model.named_steps.values())
-
-            shap_estimator = step_values[-1]
-
-            if len(step_items) > 1:
-                from sklearn.pipeline import Pipeline
-                shap_transformer = Pipeline(step_items[:-1])
-        else:
-            shap_estimator = model
-            shap_transformer = None
-
-        try:
-            shap_explainer = shap.TreeExplainer(shap_estimator)
-        except Exception:
-            try:
-                shap_explainer = shap.Explainer(shap_estimator)
-            except Exception:
-                shap_explainer = None
-
-    except Exception as exc:
-        print("SHAP SETUP ERROR:", exc)
-        shap_transformer = None
-        shap_estimator = None
-        shap_explainer = None
-
-
-build_shap_components()
-
-
-def generate_shap_text(input_df: pd.DataFrame):
-    if shap_explainer is None or shap_estimator is None:
-        return []
-
-    try:
-        if shap_transformer is not None:
-            transformed = shap_transformer.transform(input_df)
-
-            if hasattr(transformed, "toarray"):
-                transformed_dense = transformed.toarray()
-            else:
-                transformed_dense = np.asarray(transformed)
-
-            if hasattr(shap_transformer, "get_feature_names_out"):
-                feature_names = [clean_feature_name(x) for x in shap_transformer.get_feature_names_out()]
-            else:
-                feature_names = [f"feature_{i}" for i in range(transformed_dense.shape[1])]
-
-            transformed_frame = pd.DataFrame(transformed_dense, columns=feature_names)
-        else:
-            transformed_dense = input_df.values
-            feature_names = [clean_feature_name(x) for x in input_df.columns]
-            transformed_frame = input_df.copy()
-            transformed_frame.columns = feature_names
-
-        shap_output = shap_explainer(transformed_frame)
-
-        if hasattr(shap_output, "values"):
-            shap_values = np.asarray(shap_output.values)
-        else:
-            shap_values = np.asarray(shap_output)
-
-        if shap_values.ndim >= 2:
-            shap_row = shap_values[0]
-        else:
-            shap_row = shap_values
-
-        shap_row = np.array(shap_row).ravel()
-        actual_vals = np.array(transformed_dense[0]).ravel()
-
-        contributions = []
-        for feat, val, actual_val in zip(feature_names, shap_row, actual_vals):
-            feat = clean_feature_name(feat)
-
-            if (
-                ("city_" in feat or "neighbourhood_" in feat or "property_type_" in feat or "room_type_" in feat or "distance_band_" in feat)
-                and float(actual_val) == 0.0
-            ):
-                continue
-
-            contributions.append((feat, float(val), float(actual_val)))
-
-        contributions.sort(key=lambda x: abs(x[1]), reverse=True)
-        top_contributions = contributions[:6]
-
-        lines = []
-        for feat, val, actual_val in top_contributions:
-            direction = "increased" if val > 0 else "decreased"
-
-            if any(prefix in feat for prefix in ["city_", "neighbourhood_", "property_type_", "room_type_", "distance_band_"]):
-                lines.append(f"{feat} {direction} the base model prediction.")
-            else:
-                lines.append(f"{feat} (value={actual_val:g}) {direction} the base model prediction.")
-
-        return lines
-
-    except Exception as exc:
-        print("SHAP ERROR:", exc)
-        return []
-
-
-# =========================================================
 # Light calibration
 # =========================================================
 def compute_amenities_uplift(selected_amenities: list[str]) -> float:
@@ -1774,7 +1647,6 @@ def home():
     login_error = None
     form_values = get_default_form_values()
     explanation_lines = None
-    shap_explanation_lines = None
 
     if not is_logged_in():
         if request.method == "POST":
@@ -1883,11 +1755,9 @@ def home():
                     }
                 )
 
-                shap_explanation_lines = generate_shap_text(input_df)
                 set_project_explanation_snapshot(
                     {
                         "human_explanation_lines": explanation_lines or [],
-                        "shap_explanation_lines": shap_explanation_lines or [],
                         "distance_from_center_km": round(get_distance_from_center(city, neighbourhood), 2),
                         "property_type": str(request.form.get("property_type", "")).strip(),
                         "room_type": str(request.form.get("room_type", "")).strip(),
@@ -1921,7 +1791,6 @@ def home():
         model_ready=model is not None,
         model_error=model_error,
         explanation_lines=explanation_lines,
-        shap_explanation_lines=shap_explanation_lines,
         output_currency=OUTPUT_CURRENCY,
         prediction_target=PREDICTION_TARGET,
         chat_history=get_chat_history(),

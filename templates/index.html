@@ -414,16 +414,6 @@
                 </section>
             {% endif %}
 
-            {% if shap_explanation_lines %}
-                <section class="card">
-                    <h2>SHAP Explanation</h2>
-                    <ul class="explanation-list">
-                        {% for line in shap_explanation_lines %}
-                            <li>{{ line }}</li>
-                        {% endfor %}
-                    </ul>
-                </section>
-            {% endif %}
         {% endif %}
 
     </div>

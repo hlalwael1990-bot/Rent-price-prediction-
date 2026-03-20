@@ -994,13 +994,3 @@ color:#374151;
 margin-bottom:6px;
 line-height:1.4;
 }
-
-.shap-plot{
-width:100%;
-max-width:900px;
-display:block;
-margin:10px auto;
-border-radius:8px;
-border:1px solid #e5e7eb;
-background:#fff;
-}
