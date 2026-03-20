@@ -61,16 +61,14 @@ app.config["SESSION_PERMANENT"] = False
 
 def normalize_api_key(raw_value: str) -> str:
     value = str(raw_value or "").strip().strip('"').strip("'")
-    for prefix in ["OPENAI_API_KEY=", "API_OPENAI_KEY="]:
+    for prefix in ["OPENAI_API_KEY="]:
         if value.startswith(prefix):
             value = value[len(prefix):].strip()
     return value
 
 
 LOGIN_PASSWORD = os.getenv("PROJECT_LOGIN_PASSWORD", "").strip()
-OPENAI_API_KEY = normalize_api_key(
-    os.getenv("OPENAI_API_KEY", "") or os.getenv("API_OPENAI_KEY", "")
-)
+OPENAI_API_KEY = normalize_api_key(os.getenv("OPENAI_API_KEY", ""))
 OPENAI_CHAT_MODEL = os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini").strip() or "gpt-4o-mini"
 CHAT_HISTORY_LIMIT = 12
 
@@ -455,7 +453,7 @@ def build_chatbot_system_prompt(listing_snapshot: dict | None = None, response_l
 
 def request_openai_chat_response(user_message: str, history: list[dict], listing_snapshot: dict | None = None) -> str:
     if not chatbot_is_configured():
-        return "The chatbot is not configured yet. Add `API_OPENAI_KEY` or `OPENAI_API_KEY` to `src/.env` to enable it."
+        return "The chatbot is not configured yet. Add `OPENAI_API_KEY` to `src/.env` to enable it."
 
     requested_language = detect_requested_language(user_message)
     if requested_language:
