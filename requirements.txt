@@ -1,0 +1,9 @@
+flask
+pandas
+numpy
+scikit-learn
+joblib
+lightgbm
+gunicorn
+shap==0.46.0
+matplotlib==3.9.0

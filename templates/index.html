@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title if page_title else "Holiday Homes" }}</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""
+    />
+</head>
+<body>
+    <div class="container">
+
+        <header class="hero">
+            {% if not login_required %}
+                <form method="POST" action="{{ url_for('logout') }}" class="logout-form logout-form-corner">
+                    <button type="submit" class="secondary-button">Log Out</button>
+                </form>
+            {% endif %}
+
+            <div class="hero-brand">
+                <div class="brand-mark" aria-hidden="true">
+                    <img
+                        src="{{ url_for('static', filename='rent-price-logo.svg') }}"
+                        alt="Holiday Homes logo"
+                        class="brand-mark-image"
+                    >
+                </div>
+                <div class="hero-copy">
+                    <span class="hero-kicker">Smart Rental Dashboard</span>
+                    <h1>Holiday Homes</h1>
+                    <p class="subtitle">
+                        Choose the city, neighbourhood, listing details, and amenities to estimate the nightly price and total stay cost.
+                    </p>
+                    {% if prediction_target or output_currency %}
+                        <div class="hero-meta">
+                            {% if prediction_target %}
+                                <div class="hero-meta-item"><strong>Prediction target:</strong> {{ prediction_target }}</div>
+                            {% endif %}
+                            {% if output_currency %}
+                                <div class="hero-meta-item"><strong>Displayed output currency:</strong> {{ output_currency }}</div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="hero-actions">
+                <div class="status-box {% if login_required %}status-off{% elif model_ready %}status-ready{% else %}status-error{% endif %}">
+                    <span class="status-dot"></span>
+                    {% if login_required %}
+                        <span>Model is off</span>
+                    {% elif model_ready %}
+                        <span>Model is ready</span>
+                    {% else %}
+                        <span>Model failed to load</span>
+                    {% endif %}
+                </div>
+            </div>
+        </header>
+
+        {% if login_required %}
+            {% if not model_ready and model_error %}
+                <div class="message error">
+                    <strong>Model error:</strong> {{ model_error }}
+                </div>
+            {% endif %}
+
+            <section class="login-shell">
+                <div class="login-panel">
+                    <div class="login-panel-inner">
+                        <span class="login-kicker">Project Access</span>
+                        <h2>Professional access to the pricing workspace</h2>
+                        <p class="login-intro">
+                            Sign in to open the full prediction dashboard, review listing details, and work inside the protected project area.
+                        </p>
+
+                        <div class="login-points">
+                            <div class="login-point">
+                                <strong>Secure entry</strong>
+                                <span>Password protection keeps the project gate simple and controlled.</span>
+                            </div>
+                            <div class="login-point">
+                                <strong>Fast workflow</strong>
+                                <span>After login, you return directly to the pricing form and map tools.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <aside class="card login-sidebar">
+                    <div class="login-sidebar-head">
+                        <h2>Login</h2>
+                        <p class="login-sidebar-text">
+                            Enter the password to continue to the project dashboard.
+                        </p>
+                    </div>
+
+                    <form method="POST" class="prediction-form login-form" id="login-form">
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input
+                                type="password"
+                                id="password"
+                                name="password"
+                                autocomplete="current-password"
+                                placeholder="Enter your password"
+                                required
+                            >
+                        </div>
+
+                        <div class="actions login-actions">
+                            <button type="submit">Log In</button>
+                        </div>
+
+                        {% if login_error %}
+                            <div class="message error login-error-inline">
+                                {{ login_error }}
+                            </div>
+                        {% endif %}
+                    </form>
+                </aside>
+            </section>
+        {% else %}
+            {% if not model_ready and model_error %}
+                <div class="message error">
+                    <strong>Model error:</strong> {{ model_error }}
+                </div>
+            {% endif %}
+
+            {% if error_message %}
+                <div class="message error">
+                    {{ error_message }}
+                </div>
+            {% endif %}
+
+            <div class="main-layout">
+
+                <!-- LEFT PANEL -->
+                <div class="form-panel">
+                    <form method="POST" class="prediction-form" id="prediction-form">
+
+                        <!-- LOCATION -->
+                        <section class="card">
+                            <h2>Location</h2>
+
+                            <div class="grid">
+                                <div class="form-group">
+                                    <label for="city">City</label>
+                                    <select id="city" name="city" required>
+                                        <option value="">Select city</option>
+                                        {% for city in city_options %}
+                                            <option value="{{ city }}"
+                                                {% if form_values.get('city', [defaults.city])[0] == city %}selected{% endif %}>
+                                                {{ city }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="neighbourhood">Neighbourhood</label>
+                                    <select id="neighbourhood" name="neighbourhood" required>
+                                        <option value="">Select neighbourhood</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="latitude">Latitude</label>
+                                    <input
+                                        type="text"
+                                        id="latitude"
+                                        name="latitude"
+                                        value="{{ form_values.get('latitude', [defaults.latitude])[0] }}"
+                                        readonly
+                                    >
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="longitude">Longitude</label>
+                                    <input
+                                        type="text"
+                                        id="longitude"
+                                        name="longitude"
+                                        value="{{ form_values.get('longitude', [defaults.longitude])[0] }}"
+                                        readonly
+                                    >
+                                </div>
+
+                                <div class="form-group full-width">
+                                    <label for="distance_from_center_km">
+                                        Distance from center (km)
+                                        <span class="inline-value" id="distance_value">
+                                            {{ form_values.get('distance_from_center_km', [defaults.distance_from_center_km])[0] }}
+                                        </span>
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="distance_from_center_km"
+                                        name="distance_from_center_km"
+                                        value="{{ form_values.get('distance_from_center_km', [defaults.distance_from_center_km])[0] }}"
+                                        readonly
+                                    >
+
+                                    <small class="help-text" id="distance_help_text">
+                                        Distance is calculated automatically from the selected city and neighbourhood.
+                                    </small>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- PROPERTY -->
+                        <section class="card">
+                            <h2>Property</h2>
+
+                            <div class="grid">
+                                <div class="form-group">
+                                    <label for="property_type">Property Type</label>
+                                    <select id="property_type" name="property_type" required>
+                                        {% for item in property_options %}
+                                            <option value="{{ item }}"
+                                                {% if form_values.get('property_type', [defaults.property_type])[0] == item %}selected{% endif %}>
+                                                {{ item }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="room_type">Room Type</label>
+                                    <select id="room_type" name="room_type" required>
+                                        {% for item in room_options %}
+                                            <option value="{{ item }}"
+                                                {% if form_values.get('room_type', [defaults.room_type])[0] == item %}selected{% endif %}>
+                                                {{ item }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="instant_bookable">Instant Bookable</label>
+                                    <select id="instant_bookable" name="instant_bookable" required>
+                                        {% for item in instant_bookable_options %}
+                                            <option value="{{ item }}"
+                                                {% if form_values.get('instant_bookable', [defaults.instant_bookable])[0] == item %}selected{% endif %}>
+                                                {{ item }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="accommodates">Accommodates</label>
+                                    <input
+                                        type="number"
+                                        id="accommodates"
+                                        name="accommodates"
+                                        min="1"
+                                        max="20"
+                                        step="1"
+                                        value="{{ form_values.get('accommodates', [defaults.accommodates])[0] }}"
+                                        required
+                                    >
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="bedrooms">Bedrooms</label>
+                                    <input
+                                        type="number"
+                                        id="bedrooms"
+                                        name="bedrooms"
+                                        min="0"
+                                        max="10"
+                                        step="1"
+                                        value="{{ form_values.get('bedrooms', [defaults.bedrooms])[0] }}"
+                                        required
+                                    >
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="minimum_nights">Minimum Nights</label>
+                                    <input
+                                        type="number"
+                                        id="minimum_nights"
+                                        name="minimum_nights"
+                                        min="1"
+                                        max="30"
+                                        step="1"
+                                        value="{{ form_values.get('minimum_nights', [defaults.minimum_nights])[0] }}"
+                                        required
+                                    >
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="maximum_nights">Maximum Nights</label>
+                                    <input
+                                        type="number"
+                                        id="maximum_nights"
+                                        name="maximum_nights"
+                                        min="1"
+                                        max="30"
+                                        step="1"
+                                        value="{{ form_values.get('maximum_nights', [defaults.maximum_nights])[0] }}"
+                                        required
+                                    >
+                                </div>
+
+                                <div class="form-group full-width">
+                                    <label for="review_scores_rating">
+                                        Review Score Rating
+                                        <span class="inline-value" id="rating_value">
+                                            {{ form_values.get('review_scores_rating', [defaults.review_scores_rating])[0] | int }}
+                                        </span>
+                                    </label>
+
+                                    <input
+                                        type="range"
+                                        id="review_scores_rating"
+                                        name="review_scores_rating"
+                                        min="0"
+                                        max="100"
+                                        step="1"
+                                        value="{{ form_values.get('review_scores_rating', [defaults.review_scores_rating])[0] | int }}"
+                                    >
+
+                                    <small class="help-text">
+                                        Higher review score may support a higher predicted price.
+                                    </small>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- AMENITIES -->
+                        <section class="card">
+                            <h2>Top Amenities</h2>
+
+                            {% set selected_amenities = form_values.get('amenities', []) %}
+
+                            <div class="amenities-grid">
+                                {% for amenity in top_amenities %}
+                                    <label class="checkbox-item">
+                                        <input
+                                            type="checkbox"
+                                            name="amenities"
+                                            value="{{ amenity }}"
+                                            {% if amenity in selected_amenities %}checked{% endif %}
+                                        >
+                                        <span>{{ amenity }}</span>
+                                    </label>
+                                {% endfor %}
+                            </div>
+                        </section>
+
+                        <!-- ACTIONS -->
+                        <div class="actions">
+                            <button type="submit" {% if not model_ready %}disabled{% endif %}>
+                                Predict Price
+                            </button>
+
+                            {% if prediction_text or total_price_text %}
+                                <div class="result-box">
+                                    <div class="result-header">
+                                        <strong>Prediction Results</strong>
+                                    </div>
+
+                                    {% if prediction_text %}
+                                        <div class="result-line">{{ prediction_text }}</div>
+                                    {% endif %}
+
+                                    {% if total_price_text %}
+                                        <div class="result-line">{{ total_price_text }}</div>
+                                    {% endif %}
+
+                                    {% if output_currency %}
+                                        <div class="result-note">Output currency: {{ output_currency }}</div>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+
+                        </div>
+
+                    </form>
+                </div>
+
+                <!-- RIGHT PANEL -->
+                <div class="map-panel">
+                    <div class="card map-card">
+                        <h2>Location Map</h2>
+                        <div id="map"></div>
+                        <div class="map-note">
+                            The marker shows the selected neighbourhood location.
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            {% if explanation_lines %}
+                <section class="card">
+                    <h2>Why this price?</h2>
+                    <ul class="explanation-list">
+                        {% for line in explanation_lines %}
+                            <li>{{ line }}</li>
+                        {% endfor %}
+                    </ul>
+                </section>
+            {% endif %}
+
+            {% if shap_explanation_lines %}
+                <section class="card">
+                    <h2>SHAP Explanation</h2>
+                    <ul class="explanation-list">
+                        {% for line in shap_explanation_lines %}
+                            <li>{{ line }}</li>
+                        {% endfor %}
+                    </ul>
+                </section>
+            {% endif %}
+        {% endif %}
+
+    </div>
+
+    {% if not login_required %}
+    <button
+        type="button"
+        id="chat-toggle"
+        class="chat-toggle {% if chatbot_ready %}chat-toggle-ready{% else %}chat-toggle-error{% endif %}"
+        aria-expanded="false"
+        aria-controls="chat-widget"
+    >
+        <span class="chat-toggle-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" class="chat-toggle-svg">
+                <rect x="5" y="6" width="14" height="11" rx="3"></rect>
+                <path d="M9 3h6"></path>
+                <path d="M12 3v3"></path>
+                <circle cx="10" cy="11" r="1"></circle>
+                <circle cx="14" cy="11" r="1"></circle>
+                <path d="M9 14h6"></path>
+                <path d="M8 17v3l2-2"></path>
+                <path d="M16 17v3l-2-2"></path>
+            </svg>
+        </span>
+        <span class="chat-toggle-label">Agent Assistant</span>
+    </button>
+
+    <aside id="chat-widget" class="chat-widget" hidden>
+        <section id="chat-card" class="card chat-card{% if not chat_history %} chat-card-empty{% endif %}">
+            <div class="chat-card-head">
+                <div>
+                    <h2>Pricing Assistant</h2>
+                    <p class="chat-intro">
+                        Ask about pricing logic, project behavior, or questions like the cheapest house in Paris.
+                    </p>
+                </div>
+                <div class="chat-head-actions">
+                    <div class="status-box {% if chatbot_ready %}status-ready{% else %}status-error{% endif %}">
+                        <span class="status-dot"></span>
+                        {% if chatbot_ready %}
+                            <span>Assistant connected</span>
+                        {% else %}
+                            <span>API key missing</span>
+                        {% endif %}
+                    </div>
+                    <button type="button" id="chat-close" class="chat-close-button">Close</button>
+                </div>
+            </div>
+
+            <div id="chat-messages" class="chat-messages{% if not chat_history %} chat-messages-empty{% endif %}">
+                {% if chat_history %}
+                    {% for item in chat_history %}
+                        <div class="chat-message chat-message-{{ item.role }}">
+                            <div class="chat-role">
+                                {% if item.role == "assistant" %}Assistant{% else %}You{% endif %}
+                            </div>
+                            <div class="chat-bubble">{{ item.content }}</div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="chat-message chat-message-assistant chat-message-welcome" id="chat-empty-state">
+                        <div class="chat-role">Assistant</div>
+                        <div class="chat-bubble">
+                            {{ chatbot_welcome_message }}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <form id="chat-form" class="chat-form">
+                <label for="chat-input">Message</label>
+                <textarea
+                    id="chat-input"
+                    name="message"
+                    rows="4"
+                    placeholder="Ask about the cheapest house, city comparisons, price factors, or project behavior..."
+                    required
+                ></textarea>
+                <div class="chat-actions">
+                    <button type="submit" id="chat-submit">Send Message</button>
+                </div>
+            </form>
+        </section>
+    </aside>
+
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""
+    ></script>
+
+    <script>
+        const cityNeighbourhoodMap = {{ city_neighbourhood_map | tojson }};
+        const neighbourhoodCoordinates = {{ neighbourhood_coordinates | tojson }};
+        const cityCenters = {{ city_centers | tojson }};
+
+        const predictionForm = document.getElementById("prediction-form");
+        const loginForm = document.getElementById("login-form");
+        const chatToggle = document.getElementById("chat-toggle");
+        const chatWidget = document.getElementById("chat-widget");
+        const chatCard = document.getElementById("chat-card");
+        const chatClose = document.getElementById("chat-close");
+        const chatForm = document.getElementById("chat-form");
+        const chatInput = document.getElementById("chat-input");
+        const chatMessages = document.getElementById("chat-messages");
+        const chatSubmit = document.getElementById("chat-submit");
+        const citySelect = document.getElementById("city");
+        const neighbourhoodSelect = document.getElementById("neighbourhood");
+        const latitudeInput = document.getElementById("latitude");
+        const longitudeInput = document.getElementById("longitude");
+        const distanceInput = document.getElementById("distance_from_center_km");
+        const distanceValue = document.getElementById("distance_value");
+        const distanceHelpText = document.getElementById("distance_help_text");
+        const ratingInput = document.getElementById("review_scores_rating");
+        const ratingValue = document.getElementById("rating_value");
+        const minNightsInput = document.getElementById("minimum_nights");
+        const maxNightsInput = document.getElementById("maximum_nights");
+        let keepSessionOnUnload = false;
+        const tabAuthKey = "pricingDashboardAuthenticated";
+        const pendingLoginKey = "pricingDashboardPendingLogin";
+        const justLoggedIn = {{ "true" if just_logged_in else "false" }};
+        const chatbotEndpoint = "{{ url_for('chatbot') }}";
+        const chatbotResetEndpoint = "{{ url_for('chatbot_reset') }}";
+        const chatOpenStorageKey = "pricingDashboardChatOpen";
+        const chatbotWelcomeMessage = {{ chatbot_welcome_message | tojson }};
+        const chatbotWelcomeMessages = {{ chatbot_welcome_messages | tojson }};
+
+        function saveScrollPosition() {
+            try {
+                sessionStorage.setItem("predictionScrollY", String(window.scrollY || window.pageYOffset || 0));
+            } catch (error) {
+                console.debug("Could not save scroll position.", error);
+            }
+        }
+
+        function restoreScrollPosition() {
+            try {
+                const stored = sessionStorage.getItem("predictionScrollY");
+                if (!stored) {
+                    return;
+                }
+
+                sessionStorage.removeItem("predictionScrollY");
+                const targetY = parseInt(stored, 10);
+                if (!Number.isNaN(targetY)) {
+                    window.scrollTo({ top: targetY, behavior: "auto" });
+                }
+            } catch (error) {
+                console.debug("Could not restore scroll position.", error);
+            }
+        }
+
+        function closeSessionOnExit() {
+            if (keepSessionOnUnload) {
+                return;
+            }
+
+            const url = "{{ url_for('session_exit') }}";
+
+            try {
+                if (navigator.sendBeacon) {
+                    navigator.sendBeacon(url, new Blob([], { type: "application/octet-stream" }));
+                    return;
+                }
+            } catch (error) {
+                console.debug("sendBeacon failed.", error);
+            }
+
+            fetch(url, {
+                method: "POST",
+                keepalive: true,
+                credentials: "same-origin"
+            }).catch(() => {});
+        }
+
+        function ensureTabScopedAuthentication() {
+            try {
+                if (justLoggedIn) {
+                    sessionStorage.setItem(tabAuthKey, "1");
+                    sessionStorage.removeItem(pendingLoginKey);
+                    return;
+                }
+
+                const hasTabAuth = sessionStorage.getItem(tabAuthKey) === "1";
+                const hasPendingLogin = sessionStorage.getItem(pendingLoginKey) === "1";
+
+                if (hasPendingLogin) {
+                    sessionStorage.setItem(tabAuthKey, "1");
+                    sessionStorage.removeItem(pendingLoginKey);
+                    return;
+                }
+
+                if (hasTabAuth) {
+                    return;
+                }
+
+                keepSessionOnUnload = false;
+                closeSessionOnExit();
+                window.location.replace("{{ url_for('force_relogin') }}");
+            } catch (error) {
+                console.debug("Could not validate tab authentication.", error);
+            }
+        }
+
+        const initialCity = "{{ form_values.get('city', [defaults.city])[0] }}";
+        const initialNeighbourhood = "{{ form_values.get('neighbourhood', [defaults.neighbourhood])[0] }}";
+
+        function toRadians(deg) {
+            return deg * (Math.PI / 180);
+        }
+
+        function haversineKm(lat1, lon1, lat2, lon2) {
+            const R = 6371.0;
+            const dLat = toRadians(lat2 - lat1);
+            const dLon = toRadians(lon2 - lon1);
+
+            const a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(toRadians(lat1)) *
+                Math.cos(toRadians(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        function updateNeighbourhoods(keepSelected = true) {
+            const selectedCity = citySelect.value;
+            const neighbourhoods = cityNeighbourhoodMap[selectedCity] || [];
+            const targetValue = keepSelected ? (neighbourhoodSelect.value || initialNeighbourhood) : "";
+
+            neighbourhoodSelect.innerHTML = '<option value="">Select neighbourhood</option>';
+
+            neighbourhoods.forEach(function(item) {
+                const option = document.createElement("option");
+                option.value = item;
+                option.textContent = item;
+
+                if (item === targetValue) {
+                    option.selected = true;
+                }
+
+                neighbourhoodSelect.appendChild(option);
+            });
+
+            if (!neighbourhoodSelect.value && neighbourhoods.length > 0) {
+                neighbourhoodSelect.value = neighbourhoods[0];
+            }
+        }
+
+        function updateCoordinatesAndDistance() {
+            const city = citySelect.value;
+            const neighbourhood = neighbourhoodSelect.value;
+
+            if (
+                neighbourhoodCoordinates[city] &&
+                neighbourhoodCoordinates[city][neighbourhood]
+            ) {
+                const coords = neighbourhoodCoordinates[city][neighbourhood];
+                const lat = Number(coords[0]);
+                const lon = Number(coords[1]);
+
+                latitudeInput.value = lat.toFixed(6);
+                longitudeInput.value = lon.toFixed(6);
+
+                if (cityCenters[city] && cityCenters[city].length === 2) {
+                    const centerLat = Number(cityCenters[city][0]);
+                    const centerLon = Number(cityCenters[city][1]);
+
+                    const distance = haversineKm(lat, lon, centerLat, centerLon);
+                    distanceInput.value = distance.toFixed(2);
+                    distanceValue.textContent = distance.toFixed(2);
+                    distanceHelpText.textContent =
+                        "Distance is calculated automatically from the selected city and neighbourhood.";
+                } else {
+                    latitudeInput.value = "";
+                    longitudeInput.value = "";
+                    distanceInput.value = "";
+                    distanceValue.textContent = "";
+                    distanceHelpText.textContent =
+                        "City center coordinates are not available for this city.";
+                }
+
+                updateMap(lat, lon, city, neighbourhood);
+            } else {
+                latitudeInput.value = "";
+                longitudeInput.value = "";
+                distanceInput.value = "";
+                distanceValue.textContent = "";
+                distanceHelpText.textContent =
+                    "Coordinates are not available for the selected neighbourhood.";
+            }
+        }
+
+        function updateRatingDisplay() {
+            ratingValue.textContent = parseInt(ratingInput.value || "0", 10);
+        }
+
+        function enforceNightLimits() {
+            let minValue = parseInt(minNightsInput.value || "1", 10);
+            let maxValue = parseInt(maxNightsInput.value || "30", 10);
+
+            if (isNaN(minValue) || minValue < 1) minValue = 1;
+            if (isNaN(maxValue) || maxValue < 1) maxValue = 1;
+
+            if (minValue > 30) minValue = 30;
+            if (maxValue > 30) maxValue = 30;
+            if (maxValue < minValue) maxValue = minValue;
+
+            minNightsInput.value = minValue;
+            maxNightsInput.value = maxValue;
+        }
+
+        function buildListingSnapshot() {
+            const amenityValues = Array.from(
+                document.querySelectorAll('input[name="amenities"]:checked')
+            ).map(function(item) {
+                return item.value;
+            });
+
+            return {
+                city: citySelect ? citySelect.value : "",
+                neighbourhood: neighbourhoodSelect ? neighbourhoodSelect.value : "",
+                property_type: document.getElementById("property_type")?.value || "",
+                room_type: document.getElementById("room_type")?.value || "",
+                accommodates: document.getElementById("accommodates")?.value || "",
+                bedrooms: document.getElementById("bedrooms")?.value || "",
+                minimum_nights: minNightsInput ? minNightsInput.value : "",
+                maximum_nights: maxNightsInput ? maxNightsInput.value : "",
+                review_scores_rating: ratingInput ? ratingInput.value : "",
+                amenities: amenityValues
+            };
+        }
+
+        function scrollChatToBottom() {
+            if (!chatMessages) {
+                return;
+            }
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function removeChatEmptyState() {
+            const emptyState = document.getElementById("chat-empty-state");
+            if (emptyState) {
+                emptyState.remove();
+            }
+            chatMessages?.classList.remove("chat-messages-empty");
+            chatCard?.classList.remove("chat-card-empty");
+        }
+
+        function setChatEmptyState() {
+            if (!chatMessages) {
+                return;
+            }
+            chatMessages.classList.add("chat-messages-empty");
+            chatCard?.classList.add("chat-card-empty");
+        }
+
+        function renderWelcomeMessage() {
+            const welcomePool = Array.isArray(chatbotWelcomeMessages) && chatbotWelcomeMessages.length
+                ? chatbotWelcomeMessages
+                : [chatbotWelcomeMessage];
+            const welcomeMessage = welcomePool[Math.floor(Math.random() * welcomePool.length)];
+
+            return `
+                <div class="chat-message chat-message-assistant chat-message-welcome" id="chat-empty-state">
+                    <div class="chat-role">Assistant</div>
+                    <div class="chat-bubble">
+                        <div class="chat-bubble-content">
+                            <p>${escapeHtml(welcomeMessage)}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function escapeHtml(text) {
+            return String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+        }
+
+        function applyInlineFormatting(text) {
+            return text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+        }
+
+        function formatAssistantMessage(content) {
+            const normalized = String(content || "").replace(/\r\n/g, "\n").trim();
+            if (!normalized) {
+                return '<div class="chat-bubble-content"><p>No response was returned.</p></div>';
+            }
+
+            const lines = normalized.split("\n");
+            const htmlParts = [];
+            let listBuffer = [];
+
+            function flushList() {
+                if (!listBuffer.length) {
+                    return;
+                }
+
+                htmlParts.push("<ol>");
+                listBuffer.forEach(function(item) {
+                    htmlParts.push(`<li>${item}</li>`);
+                });
+                htmlParts.push("</ol>");
+                listBuffer = [];
+            }
+
+            lines.forEach(function(rawLine) {
+                const line = rawLine.trim();
+
+                if (!line) {
+                    flushList();
+                    return;
+                }
+
+                const escaped = applyInlineFormatting(escapeHtml(line));
+                const numberedMatch = escaped.match(/^\d+\.\s+(.*)$/);
+                const dashedMatch = escaped.match(/^-\s+(.*)$/);
+
+                if (numberedMatch) {
+                    listBuffer.push(numberedMatch[1]);
+                    return;
+                }
+
+                if (dashedMatch) {
+                    listBuffer.push(dashedMatch[1]);
+                    return;
+                }
+
+                flushList();
+                htmlParts.push(`<p>${escaped}</p>`);
+            });
+
+            flushList();
+
+            return `<div class="chat-bubble-content">${htmlParts.join("")}</div>`;
+        }
+
+        function enhanceExistingAssistantMessages() {
+            document.querySelectorAll(".chat-message-assistant .chat-bubble").forEach(function(bubble) {
+                const rawText = bubble.textContent || "";
+                bubble.innerHTML = formatAssistantMessage(rawText);
+            });
+        }
+
+        function appendChatMessage(role, content) {
+            if (!chatMessages) {
+                return;
+            }
+
+            removeChatEmptyState();
+
+            const wrapper = document.createElement("div");
+            wrapper.className = `chat-message chat-message-${role}`;
+
+            const roleLabel = document.createElement("div");
+            roleLabel.className = "chat-role";
+            roleLabel.textContent = role === "assistant" ? "Assistant" : "You";
+
+            const bubble = document.createElement("div");
+            bubble.className = "chat-bubble";
+            if (role === "assistant") {
+                bubble.innerHTML = formatAssistantMessage(content);
+            } else {
+                bubble.textContent = content;
+            }
+
+            wrapper.appendChild(roleLabel);
+            wrapper.appendChild(bubble);
+            chatMessages.appendChild(wrapper);
+            scrollChatToBottom();
+        }
+
+        function setChatLoadingState(isLoading) {
+            if (!chatSubmit) {
+                return;
+            }
+
+            chatSubmit.disabled = isLoading;
+            chatSubmit.textContent = isLoading ? "Assistant is thinking..." : "Send Message";
+        }
+
+        function resetChatUi() {
+            if (!chatMessages) {
+                return;
+            }
+
+            chatMessages.innerHTML = renderWelcomeMessage();
+            setChatEmptyState();
+            if (chatInput) {
+                chatInput.value = "";
+            }
+            setChatLoadingState(false);
+            scrollChatToBottom();
+        }
+
+        function openChatWidget() {
+            if (!chatWidget || !chatToggle) {
+                return;
+            }
+
+            chatWidget.hidden = false;
+            chatWidget.classList.add("chat-widget-open");
+            chatToggle.setAttribute("aria-expanded", "true");
+
+            try {
+                sessionStorage.setItem(chatOpenStorageKey, "1");
+            } catch (error) {
+                console.debug("Could not persist chat open state.", error);
+            }
+
+            setTimeout(() => {
+                scrollChatToBottom();
+                if (chatInput) {
+                    chatInput.focus();
+                }
+            }, 80);
+        }
+
+        function closeChatWidget() {
+            if (!chatWidget || !chatToggle) {
+                return;
+            }
+
+            chatWidget.classList.remove("chat-widget-open");
+            chatWidget.hidden = true;
+            chatToggle.setAttribute("aria-expanded", "false");
+
+            try {
+                sessionStorage.removeItem(chatOpenStorageKey);
+            } catch (error) {
+                console.debug("Could not clear chat open state.", error);
+            }
+        }
+
+        const map = L.map("map").setView([48.8566, 2.3522], 11);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+            attribution: "&copy; OpenStreetMap contributors"
+        }).addTo(map);
+
+        const marker = L.marker([48.8566, 2.3522]).addTo(map);
+
+        function updateMap(lat, lon, city, neighbourhood) {
+            map.setView([lat, lon], 12);
+            marker.setLatLng([lat, lon]);
+            marker.bindPopup(`<b>${city}</b><br>${neighbourhood}`).openPopup();
+
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 100);
+        }
+
+        window.addEventListener("load", function () {
+            ensureTabScopedAuthentication();
+            restoreScrollPosition();
+
+            if (initialCity) {
+                citySelect.value = initialCity;
+            }
+
+            updateNeighbourhoods(true);
+
+            if (initialNeighbourhood) {
+                neighbourhoodSelect.value = initialNeighbourhood;
+            }
+
+            updateCoordinatesAndDistance();
+            updateRatingDisplay();
+            enforceNightLimits();
+
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 200);
+
+            enhanceExistingAssistantMessages();
+            scrollChatToBottom();
+
+            try {
+                if (sessionStorage.getItem(chatOpenStorageKey) === "1") {
+                    openChatWidget();
+                }
+            } catch (error) {
+                console.debug("Could not restore chat open state.", error);
+            }
+
+        });
+
+        citySelect.addEventListener("change", function () {
+            updateNeighbourhoods(false);
+            updateCoordinatesAndDistance();
+        });
+
+        neighbourhoodSelect.addEventListener("change", function () {
+            updateCoordinatesAndDistance();
+        });
+
+        ratingInput.addEventListener("input", function () {
+            updateRatingDisplay();
+        });
+
+        minNightsInput.addEventListener("input", enforceNightLimits);
+        maxNightsInput.addEventListener("input", enforceNightLimits);
+
+        if (predictionForm) {
+            predictionForm.addEventListener("submit", function () {
+                keepSessionOnUnload = true;
+                try {
+                    sessionStorage.setItem(
+                        "predictionScrollY",
+                        String(window.scrollY || window.pageYOffset || 0)
+                    );
+                } catch (error) {
+                    console.debug("Could not save scroll position for prediction form.", error);
+                }
+            });
+        }
+
+        if (loginForm) {
+            loginForm.addEventListener("submit", function () {
+                try {
+                    sessionStorage.setItem(pendingLoginKey, "1");
+                } catch (error) {
+                    console.debug("Could not mark pending login.", error);
+                }
+            });
+        }
+
+        if (chatForm) {
+            if (chatInput) {
+                chatInput.addEventListener("keydown", function (event) {
+                    if (event.key === "Enter" && !event.shiftKey) {
+                        event.preventDefault();
+                        chatForm.requestSubmit();
+                    }
+                });
+            }
+
+            chatForm.addEventListener("submit", async function (event) {
+                event.preventDefault();
+
+                const message = (chatInput.value || "").trim();
+                if (!message) {
+                    return;
+                }
+
+                openChatWidget();
+                appendChatMessage("user", message);
+                chatInput.value = "";
+                chatInput.focus();
+                setChatLoadingState(true);
+
+                try {
+                    const response = await fetch(chatbotEndpoint, {
+                        method: "POST",
+                        credentials: "same-origin",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            message: message,
+                            listing_snapshot: buildListingSnapshot()
+                        })
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok || !data.ok) {
+                        appendChatMessage("assistant", data.error || "The chatbot request failed.");
+                    } else {
+                        appendChatMessage("assistant", data.reply || "No reply was returned.");
+                    }
+                } catch (error) {
+                    appendChatMessage("assistant", "The chatbot is currently unavailable. Please try again.");
+                } finally {
+                    setChatLoadingState(false);
+                }
+            });
+        }
+
+        if (chatToggle) {
+            chatToggle.addEventListener("click", function () {
+                if (chatWidget && !chatWidget.hidden) {
+                    closeChatWidget();
+                } else {
+                    openChatWidget();
+                }
+            });
+        }
+
+        if (chatClose) {
+            chatClose.addEventListener("click", async function () {
+                try {
+                    await fetch(chatbotResetEndpoint, {
+                        method: "POST",
+                        credentials: "same-origin"
+                    });
+                } catch (error) {
+                    console.debug("Could not reset chatbot session.", error);
+                } finally {
+                    resetChatUi();
+                    closeChatWidget();
+                }
+            });
+        }
+
+        document.querySelectorAll("form").forEach(function(form) {
+            if (form.id === "prediction-form") {
+                return;
+            }
+
+            form.addEventListener("submit", function () {
+                keepSessionOnUnload = true;
+            });
+        });
+
+        window.addEventListener("pagehide", closeSessionOnExit);
+    </script>
+    {% endif %}
+</body>
+</html>

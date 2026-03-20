@@ -1,0 +1,3526 @@
+{
+  "model_target_transform": "log1p",
+  "categorical_columns": [
+    "city",
+    "neighbourhood",
+    "property_type",
+    "room_type",
+    "instant_bookable",
+    "distance_band"
+  ],
+  "numerical_columns": [
+    "latitude",
+    "longitude",
+    "distance_from_center_km",
+    "log_distance_from_center",
+    "is_central",
+    "is_far",
+    "accommodates",
+    "bedrooms",
+    "minimum_nights",
+    "maximum_nights",
+    "review_scores_rating",
+    "host_years",
+    "guests_per_bedroom",
+    "amenities_count",
+    "many_amenities",
+    "premium_amenities",
+    "guest_x_amenities",
+    "rating_x_amenities",
+    "distance_x_rating",
+    "currency_rate",
+    "amenities_x_rate",
+    "is_villa",
+    "is_house",
+    "is_apartment",
+    "is_condominium",
+    "large_capacity",
+    "many_bedrooms",
+    "is_large_property",
+    "villa_x_accommodates",
+    "villa_x_bedrooms",
+    "villa_x_amenities",
+    "villa_x_rating",
+    "house_x_accommodates",
+    "house_x_bedrooms",
+    "house_x_amenities",
+    "house_x_rating",
+    "amenity_wifi",
+    "amenity_essentials",
+    "amenity_kitchen",
+    "amenity_long_term_stays_allowed",
+    "amenity_hangers",
+    "amenity_tv",
+    "amenity_iron",
+    "amenity_dedicated_workspace",
+    "amenity_hair_dryer",
+    "amenity_hot_water",
+    "amenity_washer",
+    "amenity_heating",
+    "amenity_shampoo",
+    "amenity_smoke_alarm",
+    "amenity_air_conditioning"
+  ],
+  "exchange_rates": {
+    "Paris": 1.0869565217391304,
+    "Rome": 1.0869565217391304,
+    "New York": 1.0,
+    "Bangkok": 0.02857142857142857,
+    "Rio de Janeiro": 0.2,
+    "Sydney": 0.6666666666666666,
+    "Istanbul": 0.14285714285714285,
+    "Hong Kong": 0.12820512820512822,
+    "Mexico City": 0.058823529411764705,
+    "Cape Town": 0.05555555555555555
+  },
+  "prediction_target": "price_local",
+  "output_currency": "USD_after_prediction",
+  "city_options": [
+    "Bangkok",
+    "Cape Town",
+    "Hong Kong",
+    "Istanbul",
+    "Mexico City",
+    "New York",
+    "Paris",
+    "Rio de Janeiro",
+    "Rome",
+    "Sydney"
+  ],
+  "city_neighbourhood_map": {
+    "Bangkok": [
+      "Bang Bon",
+      "Bang Kapi",
+      "Bang Khae",
+      "Bang Khen",
+      "Bang Kho laen",
+      "Bang Khun thain",
+      "Bang Na",
+      "Bang Phlat",
+      "Bang Rak",
+      "Bang Sue",
+      "Bangkok Noi",
+      "Bangkok Yai",
+      "Bueng Kum",
+      "Chatu Chak",
+      "Chom Thong",
+      "Din Daeng",
+      "Don Mueang",
+      "Dusit",
+      "Huai Khwang",
+      "Khan Na Yao",
+      "Khlong Sam Wa",
+      "Khlong San",
+      "Khlong Toei",
+      "Lak Si",
+      "Lat Krabang",
+      "Lat Phrao",
+      "Min Buri",
+      "Nong Chok",
+      "Nong Khaem",
+      "Parthum Wan",
+      "Phasi Charoen",
+      "Phaya Thai",
+      "Phra Khanong",
+      "Phra Nakhon",
+      "Pom Prap Sattru Phai",
+      "Pra Wet",
+      "Rat Burana",
+      "Ratchathewi",
+      "Sai Mai",
+      "Samphanthawong",
+      "Saphan Sung",
+      "Sathon",
+      "Suanluang",
+      "Taling Chan",
+      "Thawi Watthana",
+      "Thon buri",
+      "Thung khru",
+      "Vadhana",
+      "Wang Thong Lang",
+      "Yan na wa"
+    ],
+    "Cape Town": [
+      "Ward 1",
+      "Ward 10",
+      "Ward 100",
+      "Ward 101",
+      "Ward 102",
+      "Ward 103",
+      "Ward 104",
+      "Ward 105",
+      "Ward 107",
+      "Ward 108",
+      "Ward 109",
+      "Ward 11",
+      "Ward 110",
+      "Ward 111",
+      "Ward 112",
+      "Ward 113",
+      "Ward 115",
+      "Ward 116",
+      "Ward 12",
+      "Ward 14",
+      "Ward 15",
+      "Ward 16",
+      "Ward 17",
+      "Ward 18",
+      "Ward 19",
+      "Ward 2",
+      "Ward 20",
+      "Ward 21",
+      "Ward 22",
+      "Ward 23",
+      "Ward 25",
+      "Ward 26",
+      "Ward 27",
+      "Ward 28",
+      "Ward 29",
+      "Ward 3",
+      "Ward 30",
+      "Ward 31",
+      "Ward 32",
+      "Ward 38",
+      "Ward 4",
+      "Ward 40",
+      "Ward 41",
+      "Ward 43",
+      "Ward 44",
+      "Ward 45",
+      "Ward 46",
+      "Ward 48",
+      "Ward 49",
+      "Ward 5",
+      "Ward 50",
+      "Ward 51",
+      "Ward 53",
+      "Ward 54",
+      "Ward 55",
+      "Ward 56",
+      "Ward 57",
+      "Ward 58",
+      "Ward 59",
+      "Ward 6",
+      "Ward 60",
+      "Ward 61",
+      "Ward 62",
+      "Ward 63",
+      "Ward 64",
+      "Ward 65",
+      "Ward 66",
+      "Ward 67",
+      "Ward 68",
+      "Ward 69",
+      "Ward 7",
+      "Ward 70",
+      "Ward 71",
+      "Ward 72",
+      "Ward 73",
+      "Ward 74",
+      "Ward 75",
+      "Ward 76",
+      "Ward 77",
+      "Ward 78",
+      "Ward 8",
+      "Ward 81",
+      "Ward 82",
+      "Ward 83",
+      "Ward 84",
+      "Ward 85",
+      "Ward 86",
+      "Ward 9",
+      "Ward 91",
+      "Ward 92",
+      "Ward 93",
+      "Ward 94",
+      "Ward 96"
+    ],
+    "Hong Kong": [
+      "Central & Western",
+      "Eastern",
+      "Islands",
+      "Kowloon City",
+      "Kwai Tsing",
+      "Kwun Tong",
+      "North",
+      "Sai Kung",
+      "Sha Tin",
+      "Sham Shui Po",
+      "Southern",
+      "Tai Po",
+      "Tsuen Wan",
+      "Tuen Mun",
+      "Wan Chai",
+      "Wong Tai Sin",
+      "Yau Tsim Mong",
+      "Yuen Long"
+    ],
+    "Istanbul": [
+      "Adalar",
+      "Arnavutkoy",
+      "Atasehir",
+      "Avcilar",
+      "Bagcilar",
+      "Bahcelievler",
+      "Bakirkoy",
+      "Basaksehir",
+      "Bayrampasa",
+      "Besiktas",
+      "Beykoz",
+      "Beylikduzu",
+      "Beyoglu",
+      "Buyukcekmece",
+      "Catalca",
+      "Cekmekoy",
+      "Esenler",
+      "Esenyurt",
+      "Eyup",
+      "Fatih",
+      "Gaziosmanpasa",
+      "Gungoren",
+      "Kadikoy",
+      "Kagithane",
+      "Kartal",
+      "Kucukcekmece",
+      "Maltepe",
+      "Pendik",
+      "Sancaktepe",
+      "Sariyer",
+      "Sile",
+      "Silivri",
+      "Sisli",
+      "Sultanbeyli",
+      "Sultangazi",
+      "Tuzla",
+      "Umraniye",
+      "Uskudar",
+      "Zeytinburnu"
+    ],
+    "Mexico City": [
+      "Azcapotzalco",
+      "Alvaro Obregon",
+      "Benito Juarez",
+      "Coyoacan",
+      "Cuajimalpa de Morelos",
+      "Cuauhtemoc",
+      "Gustavo A. Madero",
+      "Iztacalco",
+      "Iztapalapa",
+      "La Magdalena Contreras",
+      "Miguel Hidalgo",
+      "Milpa Alta",
+      "Tlahuac",
+      "Tlalpan",
+      "Venustiano Carranza",
+      "Xochimilco"
+    ],
+    "New York": [
+      "Allerton",
+      "Arden Heights",
+      "Arrochar",
+      "Arverne",
+      "Astoria",
+      "Bath Beach",
+      "Battery Park City",
+      "Bay Ridge",
+      "Bay Terrace",
+      "Baychester",
+      "Bayside",
+      "Bayswater",
+      "Bedford-Stuyvesant",
+      "Belle Harbor",
+      "Bellerose",
+      "Belmont",
+      "Bensonhurst",
+      "Bergen Beach",
+      "Boerum Hill",
+      "Borough Park",
+      "Briarwood",
+      "Brighton Beach",
+      "Bronxdale",
+      "Brooklyn Heights",
+      "Brownsville",
+      "Bull's Head",
+      "Bushwick",
+      "Cambria Heights",
+      "Canarsie",
+      "Carroll Gardens",
+      "Castle Hill",
+      "Castleton Corners",
+      "Chelsea",
+      "Chinatown",
+      "City Island",
+      "Civic Center",
+      "Claremont Village",
+      "Clason Point",
+      "Clifton",
+      "Clinton Hill",
+      "Co-op City",
+      "Cobble Hill",
+      "College Point",
+      "Columbia St",
+      "Concord",
+      "Concourse",
+      "Concourse Village",
+      "Coney Island",
+      "Corona",
+      "Country Club",
+      "Crown Heights",
+      "Cypress Hills",
+      "DUMBO",
+      "Ditmars Steinway",
+      "Dongan Hills",
+      "Douglaston",
+      "Downtown Brooklyn",
+      "Dyker Heights",
+      "East Elmhurst",
+      "East Flatbush",
+      "East Harlem",
+      "East Morrisania",
+      "East New York",
+      "East Village",
+      "Eastchester",
+      "Edenwald",
+      "Edgemere",
+      "Elmhurst",
+      "Eltingville",
+      "Emerson Hill",
+      "Far Rockaway",
+      "Fieldston",
+      "Financial District",
+      "Flatbush",
+      "Flatiron District",
+      "Flatlands",
+      "Flushing",
+      "Fordham",
+      "Forest Hills",
+      "Fort Greene",
+      "Fort Hamilton",
+      "Fort Wadsworth",
+      "Fresh Meadows",
+      "Gerritsen Beach",
+      "Glendale",
+      "Gowanus",
+      "Gramercy",
+      "Graniteville",
+      "Grant City",
+      "Gravesend",
+      "Great Kills",
+      "Greenpoint",
+      "Greenwich Village",
+      "Grymes Hill",
+      "Harlem",
+      "Hell's Kitchen",
+      "Highbridge",
+      "Hollis",
+      "Holliswood",
+      "Howard Beach",
+      "Howland Hook",
+      "Huguenot",
+      "Hunts Point",
+      "Inwood",
+      "Jackson Heights",
+      "Jamaica",
+      "Jamaica Estates",
+      "Jamaica Hills",
+      "Kensington",
+      "Kew Gardens",
+      "Kew Gardens Hills",
+      "Kingsbridge",
+      "Kips Bay",
+      "Laurelton",
+      "Lighthouse Hill",
+      "Little Italy",
+      "Little Neck",
+      "Long Island City",
+      "Longwood",
+      "Lower East Side",
+      "Manhattan Beach",
+      "Marble Hill",
+      "Mariners Harbor",
+      "Maspeth",
+      "Melrose",
+      "Middle Village",
+      "Midland Beach",
+      "Midtown",
+      "Midwood",
+      "Mill Basin",
+      "Morningside Heights",
+      "Morris Heights",
+      "Morris Park",
+      "Morrisania",
+      "Mott Haven",
+      "Mount Eden",
+      "Mount Hope",
+      "Murray Hill",
+      "Navy Yard",
+      "New Brighton",
+      "New Dorp",
+      "New Dorp Beach",
+      "New Springville",
+      "NoHo",
+      "Nolita",
+      "North Riverdale",
+      "Norwood",
+      "Oakwood",
+      "Olinville",
+      "Ozone Park",
+      "Park Slope",
+      "Parkchester",
+      "Pelham Bay",
+      "Pelham Gardens",
+      "Port Morris",
+      "Port Richmond",
+      "Prince's Bay",
+      "Prospect Heights",
+      "Prospect-Lefferts Gardens",
+      "Queens Village",
+      "Randall Manor",
+      "Red Hook",
+      "Rego Park",
+      "Richmond Hill",
+      "Richmondtown",
+      "Ridgewood",
+      "Riverdale",
+      "Rockaway Beach",
+      "Roosevelt Island",
+      "Rosebank",
+      "Rosedale",
+      "Rossville",
+      "Schuylerville",
+      "Sea Gate",
+      "Sheepshead Bay",
+      "Shore Acres",
+      "Silver Lake",
+      "SoHo",
+      "Soundview",
+      "South Beach",
+      "South Ozone Park",
+      "South Slope",
+      "Springfield Gardens",
+      "Spuyten Duyvil",
+      "St. Albans",
+      "St. George",
+      "Stapleton",
+      "Stuyvesant Town",
+      "Sunnyside",
+      "Sunset Park",
+      "Theater District",
+      "Throgs Neck",
+      "Todt Hill",
+      "Tompkinsville",
+      "Tottenville",
+      "Tremont",
+      "Tribeca",
+      "Two Bridges",
+      "Unionport",
+      "University Heights",
+      "Upper East Side",
+      "Upper West Side",
+      "Van Nest",
+      "Vinegar Hill",
+      "Wakefield",
+      "Washington Heights",
+      "West Brighton",
+      "West Farms",
+      "West Village",
+      "Westchester Square",
+      "Westerleigh",
+      "Whitestone",
+      "Williamsbridge",
+      "Williamsburg",
+      "Willowbrook",
+      "Windsor Terrace",
+      "Woodhaven",
+      "Woodlawn",
+      "Woodrow",
+      "Woodside"
+    ],
+    "Paris": [
+      "Batignolles-Monceau",
+      "Bourse",
+      "Buttes-Chaumont",
+      "Buttes-Montmartre",
+      "Elysee",
+      "Enclos-St-Laurent",
+      "Gobelins",
+      "Hotel-de-Ville",
+      "Louvre",
+      "Luxembourg",
+      "Menilmontant",
+      "Observatoire",
+      "Opera",
+      "Palais-Bourbon",
+      "Pantheon",
+      "Passy",
+      "Popincourt",
+      "Reuilly",
+      "Temple",
+      "Vaugirard"
+    ],
+    "Rio de Janeiro": [
+      "Abolicao",
+      "Acari",
+      "Agua Santa",
+      "Alto da Boa Vista",
+      "Anchieta",
+      "Andarai",
+      "Anil",
+      "Bancarios",
+      "Bangu",
+      "Barra da Tijuca",
+      "Barra de Guaratiba",
+      "Barros Filho",
+      "Benfica",
+      "Bento Ribeiro",
+      "Bonsucesso",
+      "Botafogo",
+      "Bras de Pina",
+      "Cachambi",
+      "Cacuia",
+      "Camorim",
+      "Campinho",
+      "Campo Grande",
+      "Cascadura",
+      "Catete",
+      "Catumbi",
+      "Cavalcanti",
+      "Centro",
+      "Cidade Nova",
+      "Cidade Universitaria",
+      "Cidade de Deus",
+      "Cocota",
+      "Coelho Neto",
+      "Complexo do Alemao",
+      "Copacabana",
+      "Cordovil",
+      "Cosme Velho",
+      "Cosmos",
+      "Curicica",
+      "Del Castilho",
+      "Deodoro",
+      "Encantado",
+      "Engenho Novo",
+      "Engenho da Rainha",
+      "Engenho de Dentro",
+      "Estacio",
+      "Flamengo",
+      "Freguesia (Ilha)",
+      "Freguesia (Jacarepagua)",
+      "Galeao",
+      "Gamboa",
+      "Gardenia Azul",
+      "Gavea",
+      "Gericino",
+      "Gloria",
+      "Grajau",
+      "Grumari",
+      "Guadalupe",
+      "Guaratiba",
+      "Higienopolis",
+      "Honorio Gurgel",
+      "Humaita",
+      "Inhauma",
+      "Inhoaiba",
+      "Ipanema",
+      "Iraja",
+      "Itanhanga",
+      "Jacare",
+      "Jacarepagua",
+      "Jardim Botanico",
+      "Jardim Carioca",
+      "Jardim Guanabara",
+      "Jardim Sulacap",
+      "Joa",
+      "Lagoa",
+      "Laranjeiras",
+      "Leblon",
+      "Leme",
+      "Lins de Vasconcelos",
+      "Madureira",
+      "Magalhaes Bastos",
+      "Mangueira",
+      "Manguinhos",
+      "Maracana",
+      "Mare",
+      "Marechal Hermes",
+      "Maria da Graca",
+      "Meier",
+      "Monero",
+      "Olaria",
+      "Osvaldo Cruz",
+      "Paciencia",
+      "Padre Miguel",
+      "Paqueta",
+      "Parada de Lucas",
+      "Parque Anchieta",
+      "Pavuna",
+      "Pechincha",
+      "Pedra de Guaratiba",
+      "Penha",
+      "Penha Circular",
+      "Piedade",
+      "Pilares",
+      "Pitangueiras",
+      "Portuguesa",
+      "Praca Seca",
+      "Praca da Bandeira",
+      "Praia da Bandeira",
+      "Quintino Bocaiuva",
+      "Ramos",
+      "Realengo",
+      "Recreio dos Bandeirantes",
+      "Riachuelo",
+      "Ribeira",
+      "Ricardo de Albuquerque",
+      "Rio Comprido",
+      "Rocha",
+      "Rocha Miranda",
+      "Rocinha",
+      "Sampaio",
+      "Santa Cruz",
+      "Santa Teresa",
+      "Santissimo",
+      "Santo Cristo",
+      "Sao Conrado",
+      "Sao Cristovao",
+      "Sao Francisco Xavier",
+      "Saude",
+      "Senador Camara",
+      "Senador Vasconcelos",
+      "Sepetiba",
+      "Tanque",
+      "Taquara",
+      "Taua",
+      "Tijuca",
+      "Todos os Santos",
+      "Tomas Coelho",
+      "Urca",
+      "Vargem Grande",
+      "Vargem Pequena",
+      "Vasco da Gama",
+      "Vaz Lobo",
+      "Vicente de Carvalho",
+      "Vidigal",
+      "Vigario Geral",
+      "Vila Isabel",
+      "Vila Kosmos",
+      "Vila Militar",
+      "Vila Valqueire",
+      "Vila da Penha",
+      "Vista Alegre",
+      "Zumbi"
+    ],
+    "Rome": [
+      "I Centro Storico",
+      "II Parioli/Nomentano",
+      "III Monte Sacro",
+      "IV Tiburtina",
+      "IX Eur",
+      "V Prenestino/Centocelle",
+      "VI Roma delle Torri",
+      "VII San Giovanni/Cinecitta",
+      "VIII Appia Antica",
+      "X Ostia/Acilia",
+      "XI Arvalia/Portuense",
+      "XII Monte Verde",
+      "XIII Aurelia",
+      "XIV Monte Mario",
+      "XV Cassia/Flaminia"
+    ],
+    "Sydney": [
+      "Ashfield",
+      "Auburn",
+      "Bankstown",
+      "Blacktown",
+      "Botany Bay",
+      "Burwood",
+      "Camden",
+      "Campbelltown",
+      "Canada Bay",
+      "Canterbury",
+      "City Of Kogarah",
+      "Fairfield",
+      "Holroyd",
+      "Hornsby",
+      "Hunters Hill",
+      "Hurstville",
+      "Ku-Ring-Gai",
+      "Lane Cove",
+      "Leichhardt",
+      "Liverpool",
+      "Manly",
+      "Marrickville",
+      "Mosman",
+      "North Sydney",
+      "Parramatta",
+      "Penrith",
+      "Pittwater",
+      "Randwick",
+      "Rockdale",
+      "Ryde",
+      "Strathfield",
+      "Sutherland Shire",
+      "Sydney",
+      "The Hills Shire",
+      "Warringah",
+      "Waverley",
+      "Willoughby",
+      "Woollahra"
+    ]
+  },
+  "neighbourhood_coordinates": {
+    "Bangkok": {
+      "Bang Bon": [
+        13.66935,
+        100.40705
+      ],
+      "Bang Kapi": [
+        13.75752,
+        100.634415
+      ],
+      "Bang Khae": [
+        13.7092,
+        100.39673
+      ],
+      "Bang Khen": [
+        13.87166,
+        100.60806
+      ],
+      "Bang Kho laen": [
+        13.700395,
+        100.509365
+      ],
+      "Bang Khun thain": [
+        13.65548,
+        100.433245
+      ],
+      "Bang Na": [
+        13.67241,
+        100.60962
+      ],
+      "Bang Phlat": [
+        13.78868,
+        100.49602
+      ],
+      "Bang Rak": [
+        13.725995000000001,
+        100.52554
+      ],
+      "Bang Sue": [
+        13.81818,
+        100.53015
+      ],
+      "Bangkok Noi": [
+        13.76194,
+        100.47681
+      ],
+      "Bangkok Yai": [
+        13.73236,
+        100.47644
+      ],
+      "Bueng Kum": [
+        13.80593,
+        100.65161
+      ],
+      "Chatu Chak": [
+        13.814544999999999,
+        100.56702
+      ],
+      "Chom Thong": [
+        13.70773,
+        100.46649
+      ],
+      "Din Daeng": [
+        13.774255,
+        100.568705
+      ],
+      "Don Mueang": [
+        13.92465,
+        100.59056
+      ],
+      "Dusit": [
+        13.77296,
+        100.5094
+      ],
+      "Huai Khwang": [
+        13.77028,
+        100.578385
+      ],
+      "Khan Na Yao": [
+        13.82807,
+        100.67001
+      ],
+      "Khlong Sam Wa": [
+        13.85921,
+        100.7076
+      ],
+      "Khlong San": [
+        13.720405,
+        100.50175999999999
+      ],
+      "Khlong Toei": [
+        13.72253,
+        100.57328
+      ],
+      "Lak Si": [
+        13.88874,
+        100.5765
+      ],
+      "Lat Krabang": [
+        13.72173,
+        100.736815
+      ],
+      "Lat Phrao": [
+        13.822154999999999,
+        100.608735
+      ],
+      "Min Buri": [
+        13.79831,
+        100.71914
+      ],
+      "Nong Chok": [
+        13.83817,
+        100.83851
+      ],
+      "Nong Khaem": [
+        13.700915,
+        100.357145
+      ],
+      "Parthum Wan": [
+        13.74341,
+        100.54165
+      ],
+      "Phasi Charoen": [
+        13.71555,
+        100.45045
+      ],
+      "Phaya Thai": [
+        13.783,
+        100.54477
+      ],
+      "Phra Khanong": [
+        13.691915,
+        100.60681
+      ],
+      "Phra Nakhon": [
+        13.758935000000001,
+        100.49913000000001
+      ],
+      "Pom Prap Sattru Phai": [
+        13.74624,
+        100.50993
+      ],
+      "Pra Wet": [
+        13.69675,
+        100.65468
+      ],
+      "Rat Burana": [
+        13.68138,
+        100.50063
+      ],
+      "Ratchathewi": [
+        13.75211,
+        100.54018500000001
+      ],
+      "Sai Mai": [
+        13.9053,
+        100.64329000000001
+      ],
+      "Samphanthawong": [
+        13.737325,
+        100.512025
+      ],
+      "Saphan Sung": [
+        13.77377,
+        100.68641
+      ],
+      "Sathon": [
+        13.71683,
+        100.52842
+      ],
+      "Suanluang": [
+        13.73354,
+        100.62637
+      ],
+      "Taling Chan": [
+        13.772735,
+        100.44707
+      ],
+      "Thawi Watthana": [
+        13.789045,
+        100.357685
+      ],
+      "Thon buri": [
+        13.71673,
+        100.48345
+      ],
+      "Thung khru": [
+        13.64702,
+        100.50335
+      ],
+      "Vadhana": [
+        13.73598,
+        100.579835
+      ],
+      "Wang Thong Lang": [
+        13.780255,
+        100.609545
+      ],
+      "Yan na wa": [
+        13.698435,
+        100.539295
+      ]
+    },
+    "Cape Town": {
+      "Ward 1": [
+        -33.87736,
+        18.57417
+      ],
+      "Ward 10": [
+        -33.90278,
+        18.603085
+      ],
+      "Ward 100": [
+        -34.156774999999996,
+        18.86868
+      ],
+      "Ward 101": [
+        -33.84076,
+        18.75175
+      ],
+      "Ward 102": [
+        -33.858509999999995,
+        18.68958
+      ],
+      "Ward 103": [
+        -33.832685,
+        18.692735
+      ],
+      "Ward 104": [
+        -33.799225,
+        18.526305
+      ],
+      "Ward 105": [
+        -33.8164,
+        18.66183
+      ],
+      "Ward 107": [
+        -33.819959999999995,
+        18.48412
+      ],
+      "Ward 108": [
+        -33.97998,
+        18.678710000000002
+      ],
+      "Ward 109": [
+        -34.0916,
+        18.81242
+      ],
+      "Ward 11": [
+        -33.930105,
+        18.690775
+      ],
+      "Ward 110": [
+        -34.0509,
+        18.4951
+      ],
+      "Ward 111": [
+        -33.848259999999996,
+        18.720979999999997
+      ],
+      "Ward 112": [
+        -33.830765,
+        18.651535000000003
+      ],
+      "Ward 113": [
+        -33.82723,
+        18.50247
+      ],
+      "Ward 115": [
+        -33.91736,
+        18.41721
+      ],
+      "Ward 116": [
+        -34.01527,
+        18.625475
+      ],
+      "Ward 12": [
+        -33.94618,
+        18.65012
+      ],
+      "Ward 14": [
+        -33.952045,
+        18.726795
+      ],
+      "Ward 15": [
+        -34.06116,
+        18.832645
+      ],
+      "Ward 16": [
+        -34.02391,
+        18.73694
+      ],
+      "Ward 17": [
+        -33.99856,
+        18.70641
+      ],
+      "Ward 18": [
+        -34.01504,
+        18.63429
+      ],
+      "Ward 19": [
+        -33.95454,
+        18.67433
+      ],
+      "Ward 2": [
+        -33.891735,
+        18.593285
+      ],
+      "Ward 20": [
+        -33.97113,
+        18.64907
+      ],
+      "Ward 21": [
+        -33.86323,
+        18.64931
+      ],
+      "Ward 22": [
+        -33.94721,
+        18.60903
+      ],
+      "Ward 23": [
+        -33.802545,
+        18.46697
+      ],
+      "Ward 25": [
+        -33.932325000000006,
+        18.594585000000002
+      ],
+      "Ward 26": [
+        -33.90517,
+        18.56487
+      ],
+      "Ward 27": [
+        -33.903135,
+        18.54414
+      ],
+      "Ward 28": [
+        -33.93377,
+        18.58038
+      ],
+      "Ward 29": [
+        -33.540425,
+        18.48117
+      ],
+      "Ward 3": [
+        -33.89386,
+        18.64662
+      ],
+      "Ward 30": [
+        -33.91632,
+        18.555664999999998
+      ],
+      "Ward 31": [
+        -33.95953,
+        18.56274
+      ],
+      "Ward 32": [
+        -33.61314,
+        18.51756
+      ],
+      "Ward 38": [
+        -33.99217,
+        18.56672
+      ],
+      "Ward 4": [
+        -33.856045,
+        18.49367
+      ],
+      "Ward 40": [
+        -33.9699,
+        18.56974
+      ],
+      "Ward 41": [
+        -33.98862,
+        18.562939999999998
+      ],
+      "Ward 43": [
+        -34.07014,
+        18.555595
+      ],
+      "Ward 44": [
+        -33.96751,
+        18.54255
+      ],
+      "Ward 45": [
+        -33.97477,
+        18.5594
+      ],
+      "Ward 46": [
+        -33.97794,
+        18.53242
+      ],
+      "Ward 48": [
+        -33.980755,
+        18.515905
+      ],
+      "Ward 49": [
+        -33.9463,
+        18.520195
+      ],
+      "Ward 5": [
+        -33.86757,
+        18.5453
+      ],
+      "Ward 50": [
+        -33.94309,
+        18.54713
+      ],
+      "Ward 51": [
+        -33.94325,
+        18.52726
+      ],
+      "Ward 53": [
+        -33.93388,
+        18.507345
+      ],
+      "Ward 54": [
+        -33.9287,
+        18.38278
+      ],
+      "Ward 55": [
+        -33.89017,
+        18.49782
+      ],
+      "Ward 56": [
+        -33.9192,
+        18.49628
+      ],
+      "Ward 57": [
+        -33.937250000000006,
+        18.467154999999998
+      ],
+      "Ward 58": [
+        -33.97732,
+        18.4797
+      ],
+      "Ward 59": [
+        -33.97825,
+        18.46286
+      ],
+      "Ward 6": [
+        -33.87408,
+        18.72529
+      ],
+      "Ward 60": [
+        -33.98537,
+        18.50198
+      ],
+      "Ward 61": [
+        -34.192930000000004,
+        18.42158
+      ],
+      "Ward 62": [
+        -34.01166,
+        18.440355
+      ],
+      "Ward 63": [
+        -34.01513,
+        18.480865
+      ],
+      "Ward 64": [
+        -34.120594999999994,
+        18.45386
+      ],
+      "Ward 65": [
+        -34.0392,
+        18.50651
+      ],
+      "Ward 66": [
+        -34.02362,
+        18.50733
+      ],
+      "Ward 67": [
+        -34.06331,
+        18.51326
+      ],
+      "Ward 68": [
+        -34.07661,
+        18.471975
+      ],
+      "Ward 69": [
+        -34.107085,
+        18.383815
+      ],
+      "Ward 7": [
+        -33.88021,
+        18.71497
+      ],
+      "Ward 70": [
+        -33.87204,
+        18.61349
+      ],
+      "Ward 71": [
+        -34.060915,
+        18.436705
+      ],
+      "Ward 72": [
+        -34.041825,
+        18.481575
+      ],
+      "Ward 73": [
+        -34.03269,
+        18.45698
+      ],
+      "Ward 74": [
+        -34.0264,
+        18.35659
+      ],
+      "Ward 75": [
+        -34.03689,
+        18.59253
+      ],
+      "Ward 76": [
+        -34.02038,
+        18.61645
+      ],
+      "Ward 77": [
+        -33.93486,
+        18.41183
+      ],
+      "Ward 78": [
+        -34.048105,
+        18.59708
+      ],
+      "Ward 8": [
+        -33.89754,
+        18.68695
+      ],
+      "Ward 81": [
+        -34.0609,
+        18.60609
+      ],
+      "Ward 82": [
+        -34.067840000000004,
+        18.630580000000002
+      ],
+      "Ward 83": [
+        -34.10966,
+        18.82381
+      ],
+      "Ward 84": [
+        -34.07985,
+        18.86591
+      ],
+      "Ward 85": [
+        -34.12051,
+        18.8331
+      ],
+      "Ward 86": [
+        -34.12798,
+        18.84062
+      ],
+      "Ward 9": [
+        -33.91561,
+        18.65266
+      ],
+      "Ward 91": [
+        -34.02273,
+        18.66082
+      ],
+      "Ward 92": [
+        -34.049260000000004,
+        18.66021
+      ],
+      "Ward 93": [
+        -34.02494,
+        18.67173
+      ],
+      "Ward 94": [
+        -34.04099,
+        18.67462
+      ],
+      "Ward 96": [
+        -34.043530000000004,
+        18.70207
+      ]
+    },
+    "Hong Kong": {
+      "Central & Western": [
+        22.284615000000002,
+        114.149565
+      ],
+      "Eastern": [
+        22.28973,
+        114.19936
+      ],
+      "Islands": [
+        22.24597,
+        114.01265
+      ],
+      "Kowloon City": [
+        22.317565000000002,
+        114.18447
+      ],
+      "Kwai Tsing": [
+        22.35696,
+        114.12889
+      ],
+      "Kwun Tong": [
+        22.315635,
+        114.22379
+      ],
+      "North": [
+        22.53398,
+        114.12023
+      ],
+      "Sai Kung": [
+        22.30932,
+        114.270115
+      ],
+      "Sha Tin": [
+        22.38402,
+        114.1988
+      ],
+      "Sham Shui Po": [
+        22.32938,
+        114.16300000000001
+      ],
+      "Southern": [
+        22.24241,
+        114.16684
+      ],
+      "Tai Po": [
+        22.44238,
+        114.20494
+      ],
+      "Tsuen Wan": [
+        22.372680000000003,
+        114.10993
+      ],
+      "Tuen Mun": [
+        22.3917,
+        113.97767
+      ],
+      "Wan Chai": [
+        22.27826,
+        114.183795
+      ],
+      "Wong Tai Sin": [
+        22.339415000000002,
+        114.200925
+      ],
+      "Yau Tsim Mong": [
+        22.30577,
+        114.17138
+      ],
+      "Yuen Long": [
+        22.51168,
+        114.06285
+      ]
+    },
+    "Istanbul": {
+      "Adalar": [
+        40.87256,
+        29.12279
+      ],
+      "Arnavutkoy": [
+        41.21244,
+        28.70489
+      ],
+      "Atasehir": [
+        40.98949,
+        29.10944
+      ],
+      "Avcilar": [
+        40.98584,
+        28.7168
+      ],
+      "Bagcilar": [
+        41.04539,
+        28.81774
+      ],
+      "Bahcelievler": [
+        40.99958,
+        28.8424
+      ],
+      "Bakirkoy": [
+        40.97952,
+        28.87427
+      ],
+      "Basaksehir": [
+        41.094364999999996,
+        28.77488
+      ],
+      "Bayrampasa": [
+        41.04746,
+        28.90111
+      ],
+      "Besiktas": [
+        41.04987,
+        29.00726
+      ],
+      "Beykoz": [
+        41.105064999999996,
+        29.09917
+      ],
+      "Beylikduzu": [
+        40.99504,
+        28.63166
+      ],
+      "Beyoglu": [
+        41.03345,
+        28.979394999999997
+      ],
+      "Buyukcekmece": [
+        41.02053,
+        28.58462
+      ],
+      "Catalca": [
+        41.24694,
+        28.3989
+      ],
+      "Cekmekoy": [
+        41.030345,
+        29.22607
+      ],
+      "Esenler": [
+        41.03145,
+        28.88909
+      ],
+      "Esenyurt": [
+        41.022985,
+        28.66286
+      ],
+      "Eyup": [
+        41.07434,
+        28.937
+      ],
+      "Fatih": [
+        41.005984999999995,
+        28.9697
+      ],
+      "Gaziosmanpasa": [
+        41.07867,
+        28.88269
+      ],
+      "Gungoren": [
+        41.00945,
+        28.88515
+      ],
+      "Kadikoy": [
+        40.98891,
+        29.03114
+      ],
+      "Kagithane": [
+        41.082724999999996,
+        28.988225
+      ],
+      "Kartal": [
+        40.907030000000006,
+        29.197519999999997
+      ],
+      "Kucukcekmece": [
+        41.01326,
+        28.78614
+      ],
+      "Maltepe": [
+        40.941559999999996,
+        29.12875
+      ],
+      "Pendik": [
+        40.91927,
+        29.2947
+      ],
+      "Sancaktepe": [
+        41.00212,
+        29.22827
+      ],
+      "Sariyer": [
+        41.139305,
+        29.04562
+      ],
+      "Sile": [
+        41.14042,
+        29.75085
+      ],
+      "Silivri": [
+        41.07308,
+        28.24857
+      ],
+      "Sisli": [
+        41.05591,
+        28.98719
+      ],
+      "Sultanbeyli": [
+        40.94396,
+        29.28096
+      ],
+      "Sultangazi": [
+        41.09489,
+        28.87723
+      ],
+      "Tuzla": [
+        40.83761,
+        29.305509999999998
+      ],
+      "Umraniye": [
+        41.01446,
+        29.11594
+      ],
+      "Uskudar": [
+        41.02163,
+        29.0292
+      ],
+      "Zeytinburnu": [
+        41.008359999999996,
+        28.90185
+      ]
+    },
+    "Mexico City": {
+      "Azcapotzalco": [
+        19.470219999999998,
+        -99.178145
+      ],
+      "Alvaro Obregon": [
+        19.354735,
+        -99.204205
+      ],
+      "Benito Juarez": [
+        19.38684,
+        -99.165465
+      ],
+      "Coyoacan": [
+        19.34239,
+        -99.15941
+      ],
+      "Cuajimalpa de Morelos": [
+        19.36149,
+        -99.27686
+      ],
+      "Cuauhtemoc": [
+        19.4213,
+        -99.16321
+      ],
+      "Gustavo A. Madero": [
+        19.48047,
+        -99.12731
+      ],
+      "Iztacalco": [
+        19.401175000000002,
+        -99.092365
+      ],
+      "Iztapalapa": [
+        19.35932,
+        -99.08526
+      ],
+      "La Magdalena Contreras": [
+        19.31745,
+        -99.22659
+      ],
+      "Miguel Hidalgo": [
+        19.43408,
+        -99.19003
+      ],
+      "Milpa Alta": [
+        19.20429,
+        -99.02834
+      ],
+      "Tlahuac": [
+        19.293860000000002,
+        -99.041445
+      ],
+      "Tlalpan": [
+        19.28847,
+        -99.16479
+      ],
+      "Venustiano Carranza": [
+        19.4288,
+        -99.098265
+      ],
+      "Xochimilco": [
+        19.26501,
+        -99.12151
+      ]
+    },
+    "New York": {
+      "Allerton": [
+        40.86237,
+        -73.86201
+      ],
+      "Arden Heights": [
+        40.54791,
+        -74.1753
+      ],
+      "Arrochar": [
+        40.594565,
+        -74.07326
+      ],
+      "Arverne": [
+        40.59083,
+        -73.795
+      ],
+      "Astoria": [
+        40.76429,
+        -73.9202
+      ],
+      "Bath Beach": [
+        40.60638,
+        -74.00708
+      ],
+      "Battery Park City": [
+        40.70941,
+        -74.01631
+      ],
+      "Bay Ridge": [
+        40.63195,
+        -74.02664
+      ],
+      "Bay Terrace": [
+        40.782965000000004,
+        -73.78166999999999
+      ],
+      "Baychester": [
+        40.87223,
+        -73.84186
+      ],
+      "Bayside": [
+        40.763335,
+        -73.772595
+      ],
+      "Bayswater": [
+        40.60713,
+        -73.765215
+      ],
+      "Bedford-Stuyvesant": [
+        40.68708,
+        -73.94128
+      ],
+      "Belle Harbor": [
+        40.57567,
+        -73.84911
+      ],
+      "Bellerose": [
+        40.727965,
+        -73.72469000000001
+      ],
+      "Belmont": [
+        40.855684999999994,
+        -73.88654500000001
+      ],
+      "Bensonhurst": [
+        40.611275000000006,
+        -73.99736
+      ],
+      "Bergen Beach": [
+        40.62505,
+        -73.912745
+      ],
+      "Boerum Hill": [
+        40.686285,
+        -73.98558
+      ],
+      "Borough Park": [
+        40.63883,
+        -73.99736
+      ],
+      "Briarwood": [
+        40.70986499999999,
+        -73.81503000000001
+      ],
+      "Brighton Beach": [
+        40.57861,
+        -73.96011
+      ],
+      "Bronxdale": [
+        40.85581,
+        -73.86502
+      ],
+      "Brooklyn Heights": [
+        40.69348,
+        -73.99418
+      ],
+      "Brownsville": [
+        40.663595,
+        -73.91330500000001
+      ],
+      "Bull's Head": [
+        40.60315,
+        -74.16731
+      ],
+      "Bushwick": [
+        40.69751,
+        -73.92046
+      ],
+      "Cambria Heights": [
+        40.694625,
+        -73.735375
+      ],
+      "Canarsie": [
+        40.63957,
+        -73.90202
+      ],
+      "Carroll Gardens": [
+        40.68145,
+        -73.99554
+      ],
+      "Castle Hill": [
+        40.82244,
+        -73.85176
+      ],
+      "Castleton Corners": [
+        40.6209,
+        -74.12192
+      ],
+      "Chelsea": [
+        40.74513,
+        -73.997395
+      ],
+      "Chinatown": [
+        40.715599999999995,
+        -73.99404
+      ],
+      "City Island": [
+        40.847615000000005,
+        -73.788705
+      ],
+      "Civic Center": [
+        40.713184999999996,
+        -74.004785
+      ],
+      "Claremont Village": [
+        40.842555000000004,
+        -73.90726000000001
+      ],
+      "Clason Point": [
+        40.812195,
+        -73.854005
+      ],
+      "Clifton": [
+        40.61961,
+        -74.07655
+      ],
+      "Clinton Hill": [
+        40.68731,
+        -73.96461
+      ],
+      "Co-op City": [
+        40.87216,
+        -73.82576
+      ],
+      "Cobble Hill": [
+        40.68712,
+        -73.99464
+      ],
+      "College Point": [
+        40.78417,
+        -73.84381
+      ],
+      "Columbia St": [
+        40.685885,
+        -74.001835
+      ],
+      "Concord": [
+        40.6041,
+        -74.08442
+      ],
+      "Concourse": [
+        40.829745,
+        -73.9229
+      ],
+      "Concourse Village": [
+        40.83106,
+        -73.9165
+      ],
+      "Coney Island": [
+        40.577034999999995,
+        -73.98719
+      ],
+      "Corona": [
+        40.740205,
+        -73.86184499999999
+      ],
+      "Country Club": [
+        40.84808,
+        -73.82082
+      ],
+      "Crown Heights": [
+        40.67298,
+        -73.94952
+      ],
+      "Cypress Hills": [
+        40.68173,
+        -73.88331500000001
+      ],
+      "DUMBO": [
+        40.703325,
+        -73.98706
+      ],
+      "Ditmars Steinway": [
+        40.7749,
+        -73.90994
+      ],
+      "Dongan Hills": [
+        40.58109,
+        -74.09
+      ],
+      "Douglaston": [
+        40.76646,
+        -73.74581
+      ],
+      "Downtown Brooklyn": [
+        40.69344,
+        -73.98425
+      ],
+      "Dyker Heights": [
+        40.625434999999996,
+        -74.009405
+      ],
+      "East Elmhurst": [
+        40.763355,
+        -73.876645
+      ],
+      "East Flatbush": [
+        40.65091,
+        -73.93947
+      ],
+      "East Harlem": [
+        40.795730000000006,
+        -73.94214
+      ],
+      "East Morrisania": [
+        40.831615,
+        -73.88791
+      ],
+      "East New York": [
+        40.668935,
+        -73.88585499999999
+      ],
+      "East Village": [
+        40.72679,
+        -73.98417
+      ],
+      "Eastchester": [
+        40.88076,
+        -73.83516
+      ],
+      "Edenwald": [
+        40.888565,
+        -73.84072499999999
+      ],
+      "Edgemere": [
+        40.594975,
+        -73.77264
+      ],
+      "Elmhurst": [
+        40.74002,
+        -73.8776
+      ],
+      "Eltingville": [
+        40.540025,
+        -74.14513
+      ],
+      "Emerson Hill": [
+        40.606944999999996,
+        -74.129485
+      ],
+      "Far Rockaway": [
+        40.598395,
+        -73.75507999999999
+      ],
+      "Fieldston": [
+        40.893735,
+        -73.90274500000001
+      ],
+      "Financial District": [
+        40.706145,
+        -74.0075
+      ],
+      "Flatbush": [
+        40.64507,
+        -73.96163
+      ],
+      "Flatiron District": [
+        40.74108,
+        -73.98887
+      ],
+      "Flatlands": [
+        40.62481,
+        -73.93003
+      ],
+      "Flushing": [
+        40.75524,
+        -73.824625
+      ],
+      "Fordham": [
+        40.860325,
+        -73.895105
+      ],
+      "Forest Hills": [
+        40.721235,
+        -73.85031000000001
+      ],
+      "Fort Greene": [
+        40.68916,
+        -73.97371
+      ],
+      "Fort Hamilton": [
+        40.619175,
+        -74.031745
+      ],
+      "Fort Wadsworth": [
+        40.59528,
+        -74.06277
+      ],
+      "Fresh Meadows": [
+        40.74205,
+        -73.78721
+      ],
+      "Gerritsen Beach": [
+        40.59968,
+        -73.93275
+      ],
+      "Glendale": [
+        40.70301,
+        -73.88996
+      ],
+      "Gowanus": [
+        40.677364999999995,
+        -73.98941
+      ],
+      "Gramercy": [
+        40.73566,
+        -73.98432
+      ],
+      "Graniteville": [
+        40.617689999999996,
+        -74.15744000000001
+      ],
+      "Grant City": [
+        40.57898,
+        -74.10973
+      ],
+      "Gravesend": [
+        40.60065,
+        -73.97458
+      ],
+      "Great Kills": [
+        40.56085,
+        -74.14829
+      ],
+      "Greenpoint": [
+        40.727335,
+        -73.952585
+      ],
+      "Greenwich Village": [
+        40.73005,
+        -73.99913
+      ],
+      "Grymes Hill": [
+        40.61355,
+        -74.09064
+      ],
+      "Harlem": [
+        40.81627,
+        -73.94781499999999
+      ],
+      "Hell's Kitchen": [
+        40.76217,
+        -73.9919
+      ],
+      "Highbridge": [
+        40.8367,
+        -73.9263
+      ],
+      "Hollis": [
+        40.71348,
+        -73.76374
+      ],
+      "Holliswood": [
+        40.72375,
+        -73.766205
+      ],
+      "Howard Beach": [
+        40.662655,
+        -73.84588
+      ],
+      "Howland Hook": [
+        40.63091,
+        -74.170585
+      ],
+      "Huguenot": [
+        40.54003,
+        -74.16852
+      ],
+      "Hunts Point": [
+        40.81399,
+        -73.88801
+      ],
+      "Inwood": [
+        40.86556,
+        -73.92339
+      ],
+      "Jackson Heights": [
+        40.75185,
+        -73.87823
+      ],
+      "Jamaica": [
+        40.683795,
+        -73.78536500000001
+      ],
+      "Jamaica Estates": [
+        40.719435000000004,
+        -73.790915
+      ],
+      "Jamaica Hills": [
+        40.714015,
+        -73.79874000000001
+      ],
+      "Kensington": [
+        40.64231,
+        -73.974385
+      ],
+      "Kew Gardens": [
+        40.70836,
+        -73.83025
+      ],
+      "Kew Gardens Hills": [
+        40.72667,
+        -73.82188
+      ],
+      "Kingsbridge": [
+        40.879,
+        -73.90169
+      ],
+      "Kips Bay": [
+        40.74202,
+        -73.97971
+      ],
+      "Laurelton": [
+        40.67586,
+        -73.744655
+      ],
+      "Lighthouse Hill": [
+        40.57718,
+        -74.13981
+      ],
+      "Little Italy": [
+        40.71899,
+        -73.99748
+      ],
+      "Little Neck": [
+        40.77567,
+        -73.74465
+      ],
+      "Long Island City": [
+        40.75281,
+        -73.93631500000001
+      ],
+      "Longwood": [
+        40.819959999999995,
+        -73.90266
+      ],
+      "Lower East Side": [
+        40.71912,
+        -73.98833
+      ],
+      "Manhattan Beach": [
+        40.57895,
+        -73.94013
+      ],
+      "Marble Hill": [
+        40.875420000000005,
+        -73.910105
+      ],
+      "Mariners Harbor": [
+        40.63164,
+        -74.15643
+      ],
+      "Maspeth": [
+        40.73268,
+        -73.89949
+      ],
+      "Melrose": [
+        40.821505,
+        -73.9151
+      ],
+      "Middle Village": [
+        40.714704999999995,
+        -73.87898999999999
+      ],
+      "Midland Beach": [
+        40.574735000000004,
+        -74.0921
+      ],
+      "Midtown": [
+        40.75316,
+        -73.9787
+      ],
+      "Midwood": [
+        40.6186,
+        -73.96077
+      ],
+      "Mill Basin": [
+        40.6105,
+        -73.915995
+      ],
+      "Morningside Heights": [
+        40.80708,
+        -73.96122
+      ],
+      "Morris Heights": [
+        40.84976,
+        -73.91907
+      ],
+      "Morris Park": [
+        40.85194,
+        -73.85216
+      ],
+      "Morrisania": [
+        40.82958,
+        -73.90053
+      ],
+      "Mott Haven": [
+        40.8108,
+        -73.92246
+      ],
+      "Mount Eden": [
+        40.841955,
+        -73.917925
+      ],
+      "Mount Hope": [
+        40.84829,
+        -73.90612
+      ],
+      "Murray Hill": [
+        40.74749,
+        -73.9762
+      ],
+      "Navy Yard": [
+        40.69876,
+        -73.975785
+      ],
+      "New Brighton": [
+        40.641130000000004,
+        -74.09222
+      ],
+      "New Dorp": [
+        40.574165,
+        -74.116555
+      ],
+      "New Dorp Beach": [
+        40.565405,
+        -74.10296
+      ],
+      "New Springville": [
+        40.59274,
+        -74.15997
+      ],
+      "NoHo": [
+        40.726175,
+        -73.993025
+      ],
+      "Nolita": [
+        40.721999999999994,
+        -73.994985
+      ],
+      "North Riverdale": [
+        40.91015,
+        -73.90156
+      ],
+      "Norwood": [
+        40.87505,
+        -73.87883500000001
+      ],
+      "Oakwood": [
+        40.55969,
+        -74.11943
+      ],
+      "Olinville": [
+        40.8849,
+        -73.86476
+      ],
+      "Ozone Park": [
+        40.68109,
+        -73.8431
+      ],
+      "Park Slope": [
+        40.674555,
+        -73.978595
+      ],
+      "Parkchester": [
+        40.83661,
+        -73.861565
+      ],
+      "Pelham Bay": [
+        40.85299,
+        -73.83001
+      ],
+      "Pelham Gardens": [
+        40.865525,
+        -73.843435
+      ],
+      "Port Morris": [
+        40.80893,
+        -73.93007
+      ],
+      "Port Richmond": [
+        40.634515,
+        -74.13353000000001
+      ],
+      "Prince's Bay": [
+        40.525775,
+        -74.191055
+      ],
+      "Prospect Heights": [
+        40.67847,
+        -73.9681
+      ],
+      "Prospect-Lefferts Gardens": [
+        40.65972,
+        -73.95658
+      ],
+      "Queens Village": [
+        40.712595,
+        -73.742635
+      ],
+      "Randall Manor": [
+        40.63588,
+        -74.10749
+      ],
+      "Red Hook": [
+        40.67788,
+        -74.00937
+      ],
+      "Rego Park": [
+        40.72766,
+        -73.85911
+      ],
+      "Richmond Hill": [
+        40.69504,
+        -73.82788
+      ],
+      "Richmondtown": [
+        40.57167,
+        -74.12699
+      ],
+      "Ridgewood": [
+        40.70411,
+        -73.90649
+      ],
+      "Riverdale": [
+        40.886575,
+        -73.91028
+      ],
+      "Rockaway Beach": [
+        40.587495000000004,
+        -73.81381999999999
+      ],
+      "Roosevelt Island": [
+        40.762564999999995,
+        -73.94914
+      ],
+      "Rosebank": [
+        40.612835000000004,
+        -74.07004
+      ],
+      "Rosedale": [
+        40.65572,
+        -73.73557500000001
+      ],
+      "Rossville": [
+        40.55187,
+        -74.203115
+      ],
+      "Schuylerville": [
+        40.83641,
+        -73.83377
+      ],
+      "Sea Gate": [
+        40.57654,
+        -74.01022
+      ],
+      "Sheepshead Bay": [
+        40.594565,
+        -73.95387
+      ],
+      "Shore Acres": [
+        40.61022,
+        -74.06561
+      ],
+      "Silver Lake": [
+        40.619865000000004,
+        -74.101545
+      ],
+      "SoHo": [
+        40.724665,
+        -74.00192
+      ],
+      "Soundview": [
+        40.82639,
+        -73.86514
+      ],
+      "South Beach": [
+        40.59462,
+        -74.0858
+      ],
+      "South Ozone Park": [
+        40.67284,
+        -73.80499
+      ],
+      "South Slope": [
+        40.66548,
+        -73.986145
+      ],
+      "Springfield Gardens": [
+        40.66531,
+        -73.75913
+      ],
+      "Spuyten Duyvil": [
+        40.88147,
+        -73.91671
+      ],
+      "St. Albans": [
+        40.698930000000004,
+        -73.761185
+      ],
+      "St. George": [
+        40.64402,
+        -74.081755
+      ],
+      "Stapleton": [
+        40.628355,
+        -74.07857999999999
+      ],
+      "Stuyvesant Town": [
+        40.73188,
+        -73.97807
+      ],
+      "Sunnyside": [
+        40.74192,
+        -73.9226
+      ],
+      "Sunset Park": [
+        40.64999,
+        -74.00309
+      ],
+      "Theater District": [
+        40.76019,
+        -73.98524499999999
+      ],
+      "Throgs Neck": [
+        40.827565,
+        -73.82310000000001
+      ],
+      "Todt Hill": [
+        40.60802,
+        -74.10711
+      ],
+      "Tompkinsville": [
+        40.63295,
+        -74.08543
+      ],
+      "Tottenville": [
+        40.50868,
+        -74.23986
+      ],
+      "Tremont": [
+        40.84575,
+        -73.89053
+      ],
+      "Tribeca": [
+        40.71689,
+        -74.00777
+      ],
+      "Two Bridges": [
+        40.71199,
+        -73.99549
+      ],
+      "Unionport": [
+        40.82875,
+        -73.85274
+      ],
+      "University Heights": [
+        40.856635,
+        -73.90862000000001
+      ],
+      "Upper East Side": [
+        40.772765,
+        -73.954215
+      ],
+      "Upper West Side": [
+        40.78892,
+        -73.97363
+      ],
+      "Van Nest": [
+        40.84305,
+        -73.86398
+      ],
+      "Vinegar Hill": [
+        40.70211,
+        -73.98373
+      ],
+      "Wakefield": [
+        40.89342,
+        -73.85433
+      ],
+      "Washington Heights": [
+        40.84464,
+        -73.93889
+      ],
+      "West Brighton": [
+        40.63166,
+        -74.11435
+      ],
+      "West Farms": [
+        40.84532,
+        -73.88323
+      ],
+      "West Village": [
+        40.734275,
+        -74.00393
+      ],
+      "Westchester Square": [
+        40.84311,
+        -73.84719
+      ],
+      "Westerleigh": [
+        40.614565,
+        -74.1352
+      ],
+      "Whitestone": [
+        40.78378,
+        -73.81615
+      ],
+      "Williamsbridge": [
+        40.8789,
+        -73.86007
+      ],
+      "Williamsburg": [
+        40.71245,
+        -73.95202
+      ],
+      "Willowbrook": [
+        40.59778,
+        -74.1337
+      ],
+      "Windsor Terrace": [
+        40.65611,
+        -73.97835
+      ],
+      "Woodhaven": [
+        40.69208,
+        -73.85492
+      ],
+      "Woodlawn": [
+        40.89819,
+        -73.86321
+      ],
+      "Woodrow": [
+        40.54554,
+        -74.18033
+      ],
+      "Woodside": [
+        40.74447,
+        -73.89981
+      ]
+    },
+    "Paris": {
+      "Batignolles-Monceau": [
+        48.88575,
+        2.3158250000000002
+      ],
+      "Bourse": [
+        48.86773,
+        2.34776
+      ],
+      "Buttes-Chaumont": [
+        48.88325,
+        2.38125
+      ],
+      "Buttes-Montmartre": [
+        48.88932,
+        2.34389
+      ],
+      "Elysee": [
+        48.873225000000005,
+        2.31188
+      ],
+      "Enclos-St-Laurent": [
+        48.87366,
+        2.36058
+      ],
+      "Gobelins": [
+        48.829105,
+        2.35661
+      ],
+      "Hotel-de-Ville": [
+        48.856065,
+        2.35723
+      ],
+      "Louvre": [
+        48.86325,
+        2.34203
+      ],
+      "Luxembourg": [
+        48.85106,
+        2.33399
+      ],
+      "Menilmontant": [
+        48.86718,
+        2.39784
+      ],
+      "Observatoire": [
+        48.83122,
+        2.32536
+      ],
+      "Opera": [
+        48.878585,
+        2.34035
+      ],
+      "Palais-Bourbon": [
+        48.85671,
+        2.308725
+      ],
+      "Pantheon": [
+        48.84473,
+        2.34898
+      ],
+      "Passy": [
+        48.85886,
+        2.27764
+      ],
+      "Popincourt": [
+        48.85989,
+        2.37786
+      ],
+      "Reuilly": [
+        48.84509,
+        2.389735
+      ],
+      "Temple": [
+        48.863505,
+        2.35911
+      ],
+      "Vaugirard": [
+        48.84313,
+        2.29508
+      ]
+    },
+    "Rio de Janeiro": {
+      "Abolicao": [
+        -22.88664,
+        -43.29738
+      ],
+      "Acari": [
+        -22.81499,
+        -43.3338
+      ],
+      "Agua Santa": [
+        -22.90849,
+        -43.31344
+      ],
+      "Alto da Boa Vista": [
+        -22.96744,
+        -43.27324
+      ],
+      "Anchieta": [
+        -22.823684999999998,
+        -43.39805
+      ],
+      "Andarai": [
+        -22.92466,
+        -43.24774
+      ],
+      "Anil": [
+        -22.950454999999998,
+        -43.335750000000004
+      ],
+      "Bancarios": [
+        -22.7964,
+        -43.17436
+      ],
+      "Bangu": [
+        -22.86705,
+        -43.46953
+      ],
+      "Barra da Tijuca": [
+        -23.00755,
+        -43.34339
+      ],
+      "Barra de Guaratiba": [
+        -23.060785,
+        -43.561965
+      ],
+      "Barros Filho": [
+        -22.8345,
+        -43.366730000000004
+      ],
+      "Benfica": [
+        -22.89139,
+        -43.24031
+      ],
+      "Bento Ribeiro": [
+        -22.86423,
+        -43.358215
+      ],
+      "Bonsucesso": [
+        -22.86122,
+        -43.253765
+      ],
+      "Botafogo": [
+        -22.951725000000003,
+        -43.18386
+      ],
+      "Bras de Pina": [
+        -22.833725,
+        -43.297475000000006
+      ],
+      "Cachambi": [
+        -22.88897,
+        -43.278575000000004
+      ],
+      "Cacuia": [
+        -22.818775,
+        -43.188325
+      ],
+      "Camorim": [
+        -22.9766,
+        -43.41505
+      ],
+      "Campinho": [
+        -22.88507,
+        -43.347025
+      ],
+      "Campo Grande": [
+        -22.90629,
+        -43.56351
+      ],
+      "Cascadura": [
+        -22.8814,
+        -43.32607
+      ],
+      "Catete": [
+        -22.926395,
+        -43.17875
+      ],
+      "Catumbi": [
+        -22.91931,
+        -43.19648
+      ],
+      "Cavalcanti": [
+        -22.87538,
+        -43.317845
+      ],
+      "Centro": [
+        -22.9121,
+        -43.18437
+      ],
+      "Cidade Nova": [
+        -22.90997,
+        -43.20133
+      ],
+      "Cidade Universitaria": [
+        -22.86811,
+        -43.218655
+      ],
+      "Cidade de Deus": [
+        -22.94823,
+        -43.36059
+      ],
+      "Cocota": [
+        -22.804775,
+        -43.179375
+      ],
+      "Coelho Neto": [
+        -22.82664,
+        -43.3511
+      ],
+      "Complexo do Alemao": [
+        -22.859115000000003,
+        -43.27611
+      ],
+      "Copacabana": [
+        -22.97175,
+        -43.18854
+      ],
+      "Cordovil": [
+        -22.825339999999997,
+        -43.309745
+      ],
+      "Cosme Velho": [
+        -22.94051,
+        -43.198454999999996
+      ],
+      "Cosmos": [
+        -22.91351,
+        -43.61172
+      ],
+      "Curicica": [
+        -22.95204,
+        -43.3846
+      ],
+      "Del Castilho": [
+        -22.87851,
+        -43.26738
+      ],
+      "Deodoro": [
+        -22.842685,
+        -43.387784999999994
+      ],
+      "Encantado": [
+        -22.895719999999997,
+        -43.3028
+      ],
+      "Engenho Novo": [
+        -22.907215,
+        -43.269465
+      ],
+      "Engenho da Rainha": [
+        -22.867435,
+        -43.29867
+      ],
+      "Engenho de Dentro": [
+        -22.896214999999998,
+        -43.292815000000004
+      ],
+      "Estacio": [
+        -22.91595,
+        -43.20737
+      ],
+      "Flamengo": [
+        -22.93549,
+        -43.17604
+      ],
+      "Freguesia (Ilha)": [
+        -22.791,
+        -43.166055
+      ],
+      "Freguesia (Jacarepagua)": [
+        -22.93827,
+        -43.34047
+      ],
+      "Galeao": [
+        -22.81838,
+        -43.2249
+      ],
+      "Gamboa": [
+        -22.89613,
+        -43.19375
+      ],
+      "Gardenia Azul": [
+        -22.9576,
+        -43.350395000000006
+      ],
+      "Gavea": [
+        -22.9768,
+        -43.229425000000006
+      ],
+      "Gericino": [
+        -22.82563,
+        -43.46393
+      ],
+      "Gloria": [
+        -22.92107,
+        -43.17609
+      ],
+      "Grajau": [
+        -22.922584999999998,
+        -43.264235
+      ],
+      "Grumari": [
+        -23.05297,
+        -43.54642
+      ],
+      "Guadalupe": [
+        -22.84366,
+        -43.37439
+      ],
+      "Guaratiba": [
+        -22.983365,
+        -43.579409999999996
+      ],
+      "Higienopolis": [
+        -22.87596,
+        -43.26211
+      ],
+      "Honorio Gurgel": [
+        -22.84741,
+        -43.35786
+      ],
+      "Humaita": [
+        -22.956905,
+        -43.19968
+      ],
+      "Inhauma": [
+        -22.87361,
+        -43.27401
+      ],
+      "Inhoaiba": [
+        -22.903125,
+        -43.591115
+      ],
+      "Ipanema": [
+        -22.984535,
+        -43.20033
+      ],
+      "Iraja": [
+        -22.832025,
+        -43.325329999999994
+      ],
+      "Itanhanga": [
+        -22.98789,
+        -43.30744
+      ],
+      "Jacare": [
+        -22.89387,
+        -43.258615
+      ],
+      "Jacarepagua": [
+        -22.96955,
+        -43.39379
+      ],
+      "Jardim Botanico": [
+        -22.962885,
+        -43.219485
+      ],
+      "Jardim Carioca": [
+        -22.80901,
+        -43.19309
+      ],
+      "Jardim Guanabara": [
+        -22.81352,
+        -43.19877
+      ],
+      "Jardim Sulacap": [
+        -22.89011,
+        -43.39445
+      ],
+      "Joa": [
+        -23.01108,
+        -43.29068
+      ],
+      "Lagoa": [
+        -22.969005,
+        -43.20337
+      ],
+      "Laranjeiras": [
+        -22.935445,
+        -43.189125000000004
+      ],
+      "Leblon": [
+        -22.98378,
+        -43.22316
+      ],
+      "Leme": [
+        -22.96275,
+        -43.17064
+      ],
+      "Lins de Vasconcelos": [
+        -22.909235000000002,
+        -43.280855
+      ],
+      "Madureira": [
+        -22.87282,
+        -43.338655
+      ],
+      "Magalhaes Bastos": [
+        -22.87921,
+        -43.41175
+      ],
+      "Mangueira": [
+        -22.907670000000003,
+        -43.233850000000004
+      ],
+      "Manguinhos": [
+        -22.883575,
+        -43.246545
+      ],
+      "Maracana": [
+        -22.914054999999998,
+        -43.23086
+      ],
+      "Mare": [
+        -22.86624,
+        -43.24131
+      ],
+      "Marechal Hermes": [
+        -22.857385,
+        -43.36689
+      ],
+      "Maria da Graca": [
+        -22.88189,
+        -43.26305
+      ],
+      "Meier": [
+        -22.89884,
+        -43.27975
+      ],
+      "Monero": [
+        -22.79678,
+        -43.19706
+      ],
+      "Olaria": [
+        -22.84908,
+        -43.26757
+      ],
+      "Osvaldo Cruz": [
+        -22.868625,
+        -43.348765
+      ],
+      "Paciencia": [
+        -22.918655,
+        -43.63571
+      ],
+      "Padre Miguel": [
+        -22.880425000000002,
+        -43.453199999999995
+      ],
+      "Paqueta": [
+        -22.75479,
+        -43.1079
+      ],
+      "Parada de Lucas": [
+        -22.81822,
+        -43.30426
+      ],
+      "Parque Anchieta": [
+        -22.83474,
+        -43.4027
+      ],
+      "Pavuna": [
+        -22.818075,
+        -43.36967
+      ],
+      "Pechincha": [
+        -22.93324,
+        -43.35468
+      ],
+      "Pedra de Guaratiba": [
+        -23.00443,
+        -43.63657
+      ],
+      "Penha": [
+        -22.83804,
+        -43.27298
+      ],
+      "Penha Circular": [
+        -22.84088,
+        -43.29665
+      ],
+      "Piedade": [
+        -22.88503,
+        -43.308115
+      ],
+      "Pilares": [
+        -22.880005,
+        -43.29459
+      ],
+      "Pitangueiras": [
+        -22.815805,
+        -43.179675
+      ],
+      "Portuguesa": [
+        -22.79781,
+        -43.2068
+      ],
+      "Praca Seca": [
+        -22.89912,
+        -43.349565
+      ],
+      "Praca da Bandeira": [
+        -22.91247,
+        -43.21323
+      ],
+      "Praia da Bandeira": [
+        -22.809145,
+        -43.17913
+      ],
+      "Quintino Bocaiuva": [
+        -22.88511,
+        -43.31582
+      ],
+      "Ramos": [
+        -22.85683,
+        -43.25859
+      ],
+      "Realengo": [
+        -22.8795,
+        -43.42938
+      ],
+      "Recreio dos Bandeirantes": [
+        -23.021675000000002,
+        -43.473155
+      ],
+      "Riachuelo": [
+        -22.90295,
+        -43.25515
+      ],
+      "Ribeira": [
+        -22.82366,
+        -43.17124
+      ],
+      "Ricardo de Albuquerque": [
+        -22.83952,
+        -43.39721
+      ],
+      "Rio Comprido": [
+        -22.92412,
+        -43.20955
+      ],
+      "Rocha": [
+        -22.90115,
+        -43.24894
+      ],
+      "Rocha Miranda": [
+        -22.85429,
+        -43.34869
+      ],
+      "Rocinha": [
+        -22.988915,
+        -43.24964
+      ],
+      "Sampaio": [
+        -22.90175,
+        -43.25971
+      ],
+      "Santa Cruz": [
+        -22.90757,
+        -43.67551
+      ],
+      "Santa Teresa": [
+        -22.91908,
+        -43.18596
+      ],
+      "Santissimo": [
+        -22.87363,
+        -43.52521
+      ],
+      "Santo Cristo": [
+        -22.90184,
+        -43.20272
+      ],
+      "Sao Conrado": [
+        -22.99519,
+        -43.26262
+      ],
+      "Sao Cristovao": [
+        -22.89964,
+        -43.22081
+      ],
+      "Sao Francisco Xavier": [
+        -22.904915000000003,
+        -43.242705
+      ],
+      "Saude": [
+        -22.8989,
+        -43.18513
+      ],
+      "Senador Camara": [
+        -22.881700000000002,
+        -43.48939
+      ],
+      "Senador Vasconcelos": [
+        -22.896805,
+        -43.53656
+      ],
+      "Sepetiba": [
+        -22.980874999999997,
+        -43.69136
+      ],
+      "Tanque": [
+        -22.91541,
+        -43.36159
+      ],
+      "Taquara": [
+        -22.92604,
+        -43.37584
+      ],
+      "Taua": [
+        -22.79588,
+        -43.18589
+      ],
+      "Tijuca": [
+        -22.925065,
+        -43.23048
+      ],
+      "Todos os Santos": [
+        -22.89471,
+        -43.28677
+      ],
+      "Tomas Coelho": [
+        -22.86815,
+        -43.30499
+      ],
+      "Urca": [
+        -22.94912,
+        -43.16536
+      ],
+      "Vargem Grande": [
+        -22.98236,
+        -43.49438
+      ],
+      "Vargem Pequena": [
+        -22.98677,
+        -43.46063
+      ],
+      "Vasco da Gama": [
+        -22.89542,
+        -43.225745
+      ],
+      "Vaz Lobo": [
+        -22.858765,
+        -43.32376
+      ],
+      "Vicente de Carvalho": [
+        -22.85344,
+        -43.31494
+      ],
+      "Vidigal": [
+        -22.99456,
+        -43.236850000000004
+      ],
+      "Vigario Geral": [
+        -22.81034,
+        -43.31691
+      ],
+      "Vila Isabel": [
+        -22.915779999999998,
+        -43.242895000000004
+      ],
+      "Vila Kosmos": [
+        -22.85203,
+        -43.31092
+      ],
+      "Vila Militar": [
+        -22.879285,
+        -43.40352
+      ],
+      "Vila Valqueire": [
+        -22.88492,
+        -43.367765
+      ],
+      "Vila da Penha": [
+        -22.84538,
+        -43.30751
+      ],
+      "Vista Alegre": [
+        -22.8286,
+        -43.31916
+      ],
+      "Zumbi": [
+        -22.82216,
+        -43.17549
+      ]
+    },
+    "Rome": {
+      "I Centro Storico": [
+        41.89884,
+        12.47702
+      ],
+      "II Parioli/Nomentano": [
+        41.914075,
+        12.51183
+      ],
+      "III Monte Sacro": [
+        41.943799999999996,
+        12.530545
+      ],
+      "IV Tiburtina": [
+        41.909735,
+        12.543420000000001
+      ],
+      "IX Eur": [
+        41.80881,
+        12.47192
+      ],
+      "V Prenestino/Centocelle": [
+        41.88832,
+        12.5399
+      ],
+      "VI Roma delle Torri": [
+        41.86699,
+        12.6362
+      ],
+      "VII San Giovanni/Cinecitta": [
+        41.87819,
+        12.51893
+      ],
+      "VIII Appia Antica": [
+        41.86168,
+        12.48287
+      ],
+      "X Ostia/Acilia": [
+        41.73633,
+        12.29266
+      ],
+      "XI Arvalia/Portuense": [
+        41.86298,
+        12.46338
+      ],
+      "XII Monte Verde": [
+        41.87601,
+        12.458135
+      ],
+      "XIII Aurelia": [
+        41.89743,
+        12.44465
+      ],
+      "XIV Monte Mario": [
+        41.92176,
+        12.42552
+      ],
+      "XV Cassia/Flaminia": [
+        41.96885,
+        12.45296
+      ]
+    },
+    "Sydney": {
+      "Ashfield": [
+        -33.88777,
+        151.12746
+      ],
+      "Auburn": [
+        -33.847,
+        151.07299
+      ],
+      "Bankstown": [
+        -33.92027,
+        151.02989
+      ],
+      "Blacktown": [
+        -33.75374,
+        150.89806
+      ],
+      "Botany Bay": [
+        -33.92723,
+        151.194725
+      ],
+      "Burwood": [
+        -33.877235,
+        151.102045
+      ],
+      "Camden": [
+        -34.043405,
+        150.74045999999998
+      ],
+      "Campbelltown": [
+        -34.02583,
+        150.83675
+      ],
+      "Canada Bay": [
+        -33.84985,
+        151.10764
+      ],
+      "Canterbury": [
+        -33.916,
+        151.10318
+      ],
+      "City Of Kogarah": [
+        -33.971239999999995,
+        151.11347
+      ],
+      "Fairfield": [
+        -33.88133,
+        150.936705
+      ],
+      "Holroyd": [
+        -33.823040000000006,
+        150.985025
+      ],
+      "Hornsby": [
+        -33.71271,
+        151.08974
+      ],
+      "Hunters Hill": [
+        -33.83268,
+        151.13909
+      ],
+      "Hurstville": [
+        -33.961685,
+        151.08663
+      ],
+      "Ku-Ring-Gai": [
+        -33.753685,
+        151.1562
+      ],
+      "Lane Cove": [
+        -33.819334999999995,
+        151.17426
+      ],
+      "Leichhardt": [
+        -33.86991,
+        151.17158
+      ],
+      "Liverpool": [
+        -33.928595,
+        150.91959500000002
+      ],
+      "Manly": [
+        -33.79661,
+        151.28411
+      ],
+      "Marrickville": [
+        -33.9015,
+        151.16739
+      ],
+      "Mosman": [
+        -33.82612,
+        151.24199
+      ],
+      "North Sydney": [
+        -33.83503,
+        151.212895
+      ],
+      "Parramatta": [
+        -33.81171,
+        151.00918
+      ],
+      "Penrith": [
+        -33.75857,
+        150.71354
+      ],
+      "Pittwater": [
+        -33.63896,
+        151.3188
+      ],
+      "Randwick": [
+        -33.92046,
+        151.24711
+      ],
+      "Rockdale": [
+        -33.94112,
+        151.14702
+      ],
+      "Ryde": [
+        -33.79624,
+        151.10674
+      ],
+      "Strathfield": [
+        -33.86603,
+        151.0815
+      ],
+      "Sutherland Shire": [
+        -34.048315,
+        151.13971
+      ],
+      "Sydney": [
+        -33.881815,
+        151.20757
+      ],
+      "The Hills Shire": [
+        -33.73697,
+        150.99027
+      ],
+      "Warringah": [
+        -33.76075,
+        151.28547
+      ],
+      "Waverley": [
+        -33.89126,
+        151.27035
+      ],
+      "Willoughby": [
+        -33.80082,
+        151.1872
+      ],
+      "Woollahra": [
+        -33.881195,
+        151.244855
+      ]
+    }
+  },
+  "city_centers": {
+    "Paris": [
+      48.8566,
+      2.3522
+    ],
+    "New York": [
+      40.7128,
+      -74.006
+    ],
+    "Rome": [
+      41.9028,
+      12.4964
+    ],
+    "Bangkok": [
+      13.7563,
+      100.5018
+    ],
+    "Cape Town": [
+      -33.9249,
+      18.4241
+    ],
+    "Hong Kong": [
+      22.3193,
+      114.1694
+    ],
+    "Istanbul": [
+      41.0082,
+      28.9784
+    ],
+    "Mexico City": [
+      19.4326,
+      -99.1332
+    ],
+    "Rio de Janeiro": [
+      -22.9068,
+      -43.1729
+    ],
+    "Sydney": [
+      -33.8688,
+      151.2093
+    ]
+  },
+  "property_type_options": [
+    "Entire apartment",
+    "Entire house",
+    "Entire condominium",
+    "Entire villa",
+    "Room in hotel",
+    "Other"
+  ],
+  "room_type_options": [
+    "Entire place",
+    "Hotel room",
+    "Private room",
+    "Shared room"
+  ],
+  "instant_bookable_options": [
+    "Yes",
+    "No"
+  ],
+  "top_amenities": [
+    "Wifi",
+    "Essentials",
+    "Kitchen",
+    "Long term stays allowed",
+    "Hangers",
+    "TV",
+    "Iron",
+    "Dedicated workspace",
+    "Hair dryer",
+    "Hot water",
+    "Washer",
+    "Heating",
+    "Shampoo",
+    "Smoke alarm",
+    "Air conditioning"
+  ],
+  "defaults": {
+    "city": "Paris",
+    "neighbourhood": "Batignolles-Monceau",
+    "property_type": "Entire apartment",
+    "room_type": "Entire place",
+    "instant_bookable": "No",
+    "latitude": 48.88575,
+    "longitude": 2.3158250000000002,
+    "distance_from_center_km": 4.562202415688309,
+    "accommodates": 2,
+    "bedrooms": 1,
+    "minimum_nights": 2,
+    "maximum_nights": 30,
+    "review_scores_rating": 96
+  }
+}
