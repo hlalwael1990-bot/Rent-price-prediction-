@@ -233,6 +233,23 @@
                                     </select>
                                 </div>
 
+                                <div
+                                    class="form-group"
+                                    id="other-property-type-group"
+                                    {% if form_values.get('property_type', [defaults.property_type])[0] != 'Other' %}hidden{% endif %}
+                                >
+                                    <label for="other_property_type">Specify Property Type</label>
+                                    <select id="other_property_type" name="other_property_type">
+                                        <option value="">Select type</option>
+                                        {% for item in other_property_type_options %}
+                                            <option value="{{ item }}"
+                                                {% if form_values.get('other_property_type', [''])[0] == item %}selected{% endif %}>
+                                                {{ item }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
                                 <div class="form-group">
                                     <label for="room_type">Room Type</label>
                                     <select id="room_type" name="room_type" required>
@@ -264,7 +281,7 @@
                                         id="accommodates"
                                         name="accommodates"
                                         min="1"
-                                        max="20"
+                                        max="8"
                                         step="1"
                                         value="{{ form_values.get('accommodates', [defaults.accommodates])[0] }}"
                                         required
@@ -277,8 +294,8 @@
                                         type="number"
                                         id="bedrooms"
                                         name="bedrooms"
-                                        min="0"
-                                        max="10"
+                                        min="1"
+                                        max="4"
                                         step="1"
                                         value="{{ form_values.get('bedrooms', [defaults.bedrooms])[0] }}"
                                         required
@@ -620,6 +637,153 @@
 
         const initialCity = "{{ form_values.get('city', [defaults.city])[0] }}";
         const initialNeighbourhood = "{{ form_values.get('neighbourhood', [defaults.neighbourhood])[0] }}";
+        const propertyTypeSelect = document.getElementById("property_type");
+        const roomTypeSelect = document.getElementById("room_type");
+        const otherPropertyTypeGroup = document.getElementById("other-property-type-group");
+        const otherPropertyTypeSelect = document.getElementById("other_property_type");
+        const accommodatesInput = document.getElementById("accommodates");
+        const bedroomsInput = document.getElementById("bedrooms");
+        const propertyTypeRoomTypeRules = {{ property_type_room_type_rules | tojson }};
+        const otherPropertyTypeRoomTypeRules = {{ other_property_type_room_type_rules | tojson }};
+
+        function applyOtherPropertyTypeVisibility() {
+            if (!propertyTypeSelect || !otherPropertyTypeGroup || !otherPropertyTypeSelect) {
+                return;
+            }
+
+            const isOther = propertyTypeSelect.value === "Other";
+            otherPropertyTypeGroup.hidden = !isOther;
+            otherPropertyTypeGroup.style.display = isOther ? "" : "none";
+            otherPropertyTypeSelect.required = isOther;
+
+            if (!isOther) {
+                otherPropertyTypeSelect.value = "";
+            }
+        }
+
+        function applyRoomTypeLimits() {
+            if (!propertyTypeSelect || !roomTypeSelect) {
+                return;
+            }
+
+            const propertyType = propertyTypeSelect.value;
+            const otherPropertyType = otherPropertyTypeSelect ? otherPropertyTypeSelect.value : "";
+            let allowedRoomTypes = propertyTypeRoomTypeRules[propertyType] || [];
+
+            if (propertyType === "Other" && otherPropertyTypeRoomTypeRules[otherPropertyType]) {
+                allowedRoomTypes = otherPropertyTypeRoomTypeRules[otherPropertyType];
+            }
+
+            const currentValue = roomTypeSelect.value;
+
+            roomTypeSelect.querySelectorAll("option").forEach(function(option) {
+                const allowed = allowedRoomTypes.includes(option.value);
+                option.hidden = !allowed;
+                option.disabled = !allowed;
+            });
+
+            if (!allowedRoomTypes.includes(currentValue) && allowedRoomTypes.length > 0) {
+                roomTypeSelect.value = allowedRoomTypes[0];
+            }
+        }
+
+        function getPropertyTypeLimits(propertyType, otherPropertyType = "", roomType = "") {
+            if (roomType === "Shared room") {
+                return { accommodatesMin: 1, accommodatesMax: 3, bedroomsMin: 1, bedroomsMax: 1 };
+            }
+            if (propertyType === "Other" && otherPropertyType === "Studio") {
+                return { accommodatesMin: 1, accommodatesMax: 3, bedroomsMin: 1, bedroomsMax: 1 };
+            }
+            if (propertyType === "Other" && otherPropertyType === "Cabin") {
+                return { accommodatesMin: 1, accommodatesMax: 6, bedroomsMin: 1, bedroomsMax: 3 };
+            }
+            if (propertyType === "Other" && otherPropertyType === "Chalet") {
+                return { accommodatesMin: 1, accommodatesMax: 6, bedroomsMin: 1, bedroomsMax: 3 };
+            }
+            if (propertyType === "Other" && otherPropertyType === "Loft") {
+                return { accommodatesMin: 1, accommodatesMax: 4, bedroomsMin: 0, bedroomsMax: 0 };
+            }
+            if (propertyType === "Entire apartment") {
+                return { accommodatesMin: 1, accommodatesMax: 8, bedroomsMin: 1, bedroomsMax: 4 };
+            }
+            if (propertyType === "Entire condominium") {
+                return { accommodatesMin: 1, accommodatesMax: 8, bedroomsMin: 1, bedroomsMax: 4 };
+            }
+            if (propertyType === "Entire house") {
+                return { accommodatesMin: 1, accommodatesMax: 8, bedroomsMin: 2, bedroomsMax: 5 };
+            }
+            if (propertyType === "Entire villa") {
+                return { accommodatesMin: 1, accommodatesMax: 12, bedroomsMin: 3, bedroomsMax: 7 };
+            }
+            if (propertyType === "Room in hotel") {
+                return { accommodatesMin: 1, accommodatesMax: 3, bedroomsMin: 1, bedroomsMax: 1 };
+            }
+            return { accommodatesMin: 1, accommodatesMax: 8, bedroomsMin: 1, bedroomsMax: 5 };
+        }
+
+        function getEffectiveAccommodatesBounds(propertyType, bedrooms, otherPropertyType = "", roomType = "") {
+            const limits = getPropertyTypeLimits(propertyType, otherPropertyType, roomType);
+            const normalizedBedrooms = Math.max(parseInt(bedrooms || String(limits.bedroomsMin), 10) || limits.bedroomsMin, Math.max(limits.bedroomsMin, 1));
+            const minAccommodates = limits.accommodatesMin;
+            const maxAccommodates = Math.min(limits.accommodatesMax, normalizedBedrooms * 3);
+            return {
+                min: minAccommodates,
+                max: Math.max(minAccommodates, maxAccommodates)
+            };
+        }
+
+        function getEffectiveBedroomsBounds(propertyType, accommodates, otherPropertyType = "", roomType = "") {
+            const limits = getPropertyTypeLimits(propertyType, otherPropertyType, roomType);
+            if (limits.bedroomsMax === 0) {
+                return { min: 0, max: 0 };
+            }
+            const normalizedAccommodates = Math.max(parseInt(accommodates || String(limits.accommodatesMin), 10) || limits.accommodatesMin, limits.accommodatesMin);
+            const minBedrooms = Math.max(limits.bedroomsMin, Math.ceil(normalizedAccommodates / 3));
+            return {
+                min: minBedrooms,
+                max: Math.max(minBedrooms, limits.bedroomsMax)
+            };
+        }
+
+        function applyPropertyTypeLimits() {
+            if (!propertyTypeSelect || !accommodatesInput || !bedroomsInput) {
+                return;
+            }
+
+            const propertyType = propertyTypeSelect.value;
+            const otherPropertyType = otherPropertyTypeSelect ? otherPropertyTypeSelect.value : "";
+            const roomType = roomTypeSelect ? roomTypeSelect.value : "";
+            applyOtherPropertyTypeVisibility();
+            applyRoomTypeLimits();
+
+            let bedroomsValue = parseInt(bedroomsInput.value || "0", 10);
+            let accommodatesValue = parseInt(accommodatesInput.value || "0", 10);
+
+            const baseLimits = getPropertyTypeLimits(propertyType, otherPropertyType, roomType);
+
+            if (Number.isNaN(bedroomsValue)) bedroomsValue = baseLimits.bedroomsMin;
+            if (Number.isNaN(accommodatesValue)) accommodatesValue = baseLimits.accommodatesMin;
+
+            const bedroomsBounds = getEffectiveBedroomsBounds(propertyType, accommodatesValue, otherPropertyType, roomType);
+            bedroomsValue = Math.min(Math.max(bedroomsValue, bedroomsBounds.min), bedroomsBounds.max);
+            bedroomsInput.min = String(bedroomsBounds.min);
+            bedroomsInput.max = String(bedroomsBounds.max);
+            bedroomsInput.value = String(bedroomsValue);
+            bedroomsInput.readOnly = bedroomsBounds.min === bedroomsBounds.max;
+
+            const accommodatesBounds = getEffectiveAccommodatesBounds(propertyType, bedroomsValue, otherPropertyType, roomType);
+            accommodatesValue = Math.min(Math.max(accommodatesValue, accommodatesBounds.min), accommodatesBounds.max);
+            accommodatesInput.min = String(accommodatesBounds.min);
+            accommodatesInput.max = String(accommodatesBounds.max);
+            accommodatesInput.value = String(accommodatesValue);
+
+            const finalBedroomsBounds = getEffectiveBedroomsBounds(propertyType, accommodatesValue, otherPropertyType, roomType);
+            bedroomsValue = Math.min(Math.max(bedroomsValue, finalBedroomsBounds.min), finalBedroomsBounds.max);
+            bedroomsInput.min = String(finalBedroomsBounds.min);
+            bedroomsInput.max = String(finalBedroomsBounds.max);
+            bedroomsInput.value = String(bedroomsValue);
+            bedroomsInput.readOnly = finalBedroomsBounds.min === finalBedroomsBounds.max;
+        }
 
         function toRadians(deg) {
             return deg * (Math.PI / 180);
@@ -738,6 +902,7 @@
                 city: citySelect ? citySelect.value : "",
                 neighbourhood: neighbourhoodSelect ? neighbourhoodSelect.value : "",
                 property_type: document.getElementById("property_type")?.value || "",
+                other_property_type: document.getElementById("other_property_type")?.value || "",
                 room_type: document.getElementById("room_type")?.value || "",
                 accommodates: document.getElementById("accommodates")?.value || "",
                 bedrooms: document.getElementById("bedrooms")?.value || "",
@@ -980,6 +1145,7 @@
             }
 
             updateNeighbourhoods(true);
+            applyPropertyTypeLimits();
 
             if (initialNeighbourhood) {
                 neighbourhoodSelect.value = initialNeighbourhood;
@@ -1010,6 +1176,36 @@
             updateNeighbourhoods(false);
             updateCoordinatesAndDistance();
         });
+
+        if (propertyTypeSelect) {
+            propertyTypeSelect.addEventListener("change", function () {
+                applyPropertyTypeLimits();
+            });
+        }
+
+        if (roomTypeSelect) {
+            roomTypeSelect.addEventListener("change", function () {
+                applyPropertyTypeLimits();
+            });
+        }
+
+        if (otherPropertyTypeSelect) {
+            otherPropertyTypeSelect.addEventListener("change", function () {
+                applyPropertyTypeLimits();
+            });
+        }
+
+        if (accommodatesInput) {
+            accommodatesInput.addEventListener("input", function () {
+                applyPropertyTypeLimits();
+            });
+        }
+
+        if (bedroomsInput) {
+            bedroomsInput.addEventListener("input", function () {
+                applyPropertyTypeLimits();
+            });
+        }
 
         neighbourhoodSelect.addEventListener("change", function () {
             updateCoordinatesAndDistance();

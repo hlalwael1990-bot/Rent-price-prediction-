@@ -171,6 +171,7 @@ def build_listing_snapshot(form_like) -> dict:
         "city": city,
         "neighbourhood": neighbourhood,
         "property_type": str(form_like.get("property_type", "")).strip(),
+        "other_property_type": str(form_like.get("other_property_type", "")).strip(),
         "room_type": str(form_like.get("room_type", "")).strip(),
         "accommodates": str(form_like.get("accommodates", "")).strip(),
         "bedrooms": str(form_like.get("bedrooms", "")).strip(),
@@ -422,6 +423,7 @@ def build_chatbot_system_prompt(listing_snapshot: dict | None = None, response_l
         {
             "prediction_target": PREDICTION_TARGET,
             "output_currency": OUTPUT_CURRENCY,
+            "chatbot_currency_rule": "Use $ only for USD. When mentioning prices, show the currency symbol and the currency code explicitly, such as EUR 129.16 (EUR), MX$ 2500.00 (MXN), or $140.39 (USD).",
             "cities": CITY_OPTIONS,
             "property_types": PROPERTY_TYPE_OPTIONS,
             "room_types": ROOM_TYPE_OPTIONS,
@@ -443,6 +445,8 @@ def build_chatbot_system_prompt(listing_snapshot: dict | None = None, response_l
         "Do not claim to retrieve real listings from a listings table or dataset file. "
         "When explaining a price, explicitly consider and mention distance from center, property type, room type, guest capacity, review score, amenities, and output currency whenever they are available in context. "
         "Use `final_price_local` and `final_price_output` as the effective estimate. "
+        "Never use the `$` symbol for local currency unless the local currency is actually USD. "
+        "If local and converted currencies are both mentioned, show each one with its currency symbol and currency code explicitly. "
         "Do not mention internal raw model anchors, pre-calibration values, or intermediate base estimates unless the developer explicitly asks for debugging details. "
         "For entire houses and villas, explain the result through property-type floor logic, calibration, amenities, review uplift, and other visible pricing factors only. "
         "If the user asks something unrelated to the project, answer briefly and then steer back to project context when appropriate. "
@@ -631,8 +635,20 @@ def compute_property_type_multiplier(
     elif key == "condominium":
         multiplier *= 1.06
         multiplier *= 1.0 + min(max(accommodates - 3, 0), 6) * 0.01
+    elif key == "apartment":
+        multiplier *= 1.04
 
     return min(multiplier, 8.0)
+
+
+def compute_room_type_multiplier(room_type: str) -> float:
+    normalized = str(room_type or "").strip().lower()
+
+    if normalized == "shared room":
+        return 0.50
+    if normalized == "private room":
+        return 0.93
+    return 1.0
 
 
 def compute_property_type_amenity_factor(property_type: str, room_type: str) -> float:
@@ -755,6 +771,32 @@ def get_currency_rate(city: str) -> float:
     if rate is None:
         return 1.0
     return float(rate)
+
+
+def get_local_currency_label(city: str) -> str:
+    city_value = str(city or "").strip()
+    local_currency_map = {
+        "Paris": "EUR",
+        "New York": "USD",
+        "Mexico City": "MXN",
+    }
+    return local_currency_map.get(city_value, "local currency")
+
+
+def get_currency_symbol(currency_code: str) -> str:
+    normalized = str(currency_code or "").strip().upper()
+    currency_symbol_map = {
+        "USD": "$",
+        "EUR": "EUR ",
+        "MXN": "MX$",
+    }
+    return currency_symbol_map.get(normalized, f"{normalized} " if normalized else "")
+
+
+def format_currency_amount(amount: float, currency_code: str) -> str:
+    normalized = str(currency_code or "").strip().upper()
+    symbol = get_currency_symbol(normalized)
+    return f"{symbol}{float(amount):,.2f} ({normalized})" if normalized else f"{float(amount):,.2f}"
 
 
 def output_currency_label() -> str:
@@ -922,6 +964,52 @@ DEFAULTS.setdefault("maximum_nights", 30)
 DEFAULTS.setdefault("review_scores_rating", 90)
 
 EXPECTED_COLUMNS = CATEGORICAL_COLUMNS + NUMERICAL_COLUMNS
+
+PROPERTY_TYPE_ROOM_TYPE_RULES = {
+    "Entire apartment": ["Entire place", "Private room"],
+    "Entire house": ["Entire place", "Private room"],
+    "Entire condominium": ["Entire place"],
+    "Entire villa": ["Entire place"],
+    "Room in hotel": ["Hotel room"],
+    "Other": ROOM_TYPE_OPTIONS,
+}
+
+OTHER_PROPERTY_TYPE_ROOM_TYPE_RULES = {
+    "Studio": ["Entire place"],
+    "Chalet": ["Entire place"],
+    "Guest house": ["Entire place", "Private room", "Shared room"],
+    "Cabin": ["Entire place", "Private room", "Shared room"],
+    "Loft": ["Entire place"],
+}
+
+OTHER_PROPERTY_TYPE_OPTIONS = [
+    "Studio",
+    "Chalet",
+    "Guest house",
+    "Cabin",
+    "Loft",
+]
+
+OTHER_PROPERTY_TYPE_PRICE_MULTIPLIERS = {
+    "Studio": 0.98,
+    "Guest house": 1.00,
+    "Loft": 1.08,
+    "Cabin": 1.12,
+    "Chalet": 1.18,
+}
+
+
+def get_allowed_room_types(property_type: str, other_property_type: str = "") -> list[str]:
+    property_type_value = str(property_type or "").strip()
+    other_property_type_value = str(other_property_type or "").strip()
+
+    if property_type_value == "Other":
+        return OTHER_PROPERTY_TYPE_ROOM_TYPE_RULES.get(
+            other_property_type_value,
+            PROPERTY_TYPE_ROOM_TYPE_RULES.get("Other", ROOM_TYPE_OPTIONS),
+        )
+
+    return PROPERTY_TYPE_ROOM_TYPE_RULES.get(property_type_value, ROOM_TYPE_OPTIONS)
 
 
 # =========================================================
@@ -1149,6 +1237,7 @@ def build_prediction_inputs(form) -> dict:
         "city": str(form.get("city", DEFAULTS["city"])).strip(),
         "neighbourhood": str(form.get("neighbourhood", DEFAULTS["neighbourhood"])).strip(),
         "property_type": str(form.get("property_type", DEFAULTS["property_type"])).strip(),
+        "other_property_type": str(form.get("other_property_type", "")).strip(),
         "room_type": str(form.get("room_type", DEFAULTS["room_type"])).strip(),
         "instant_bookable": str(form.get("instant_bookable", DEFAULTS["instant_bookable"])).strip(),
         "accommodates": safe_int(form.get("accommodates"), DEFAULTS["accommodates"]),
@@ -1343,9 +1432,82 @@ def predict_base_price_local(input_df: pd.DataFrame) -> float:
     return max(float(raw_pred), 0.0)
 
 
-def compute_monotonic_price(base_inputs: dict, enforce_amenity_monotonic: bool = True) -> tuple[float, float]:
+def get_property_type_limits(
+    property_type: str,
+    other_property_type: str = "",
+    room_type: str = "",
+) -> dict[str, int]:
+    other_property_type_value = str(other_property_type or "").strip()
+    room_type_value = str(room_type or "").strip().lower()
+
+    if room_type_value == "shared room":
+        return {"accommodates_min": 1, "accommodates_max": 3, "bedrooms_min": 1, "bedrooms_max": 1}
+
+    if property_type == "Other" and other_property_type_value == "Studio":
+        return {"accommodates_min": 1, "accommodates_max": 3, "bedrooms_min": 1, "bedrooms_max": 1}
+    if property_type == "Other" and other_property_type_value == "Cabin":
+        return {"accommodates_min": 1, "accommodates_max": 6, "bedrooms_min": 1, "bedrooms_max": 3}
+    if property_type == "Other" and other_property_type_value == "Chalet":
+        return {"accommodates_min": 1, "accommodates_max": 6, "bedrooms_min": 1, "bedrooms_max": 3}
+    if property_type == "Other" and other_property_type_value == "Loft":
+        return {"accommodates_min": 1, "accommodates_max": 4, "bedrooms_min": 0, "bedrooms_max": 0}
+
+    if property_type == "Entire apartment":
+        return {"accommodates_min": 1, "accommodates_max": 8, "bedrooms_min": 1, "bedrooms_max": 4}
+    if property_type == "Entire condominium":
+        return {"accommodates_min": 1, "accommodates_max": 8, "bedrooms_min": 1, "bedrooms_max": 4}
+    if property_type == "Entire house":
+        return {"accommodates_min": 1, "accommodates_max": 8, "bedrooms_min": 2, "bedrooms_max": 5}
+    if property_type == "Entire villa":
+        return {"accommodates_min": 1, "accommodates_max": 12, "bedrooms_min": 3, "bedrooms_max": 7}
+    if property_type == "Room in hotel":
+        return {"accommodates_min": 1, "accommodates_max": 3, "bedrooms_min": 1, "bedrooms_max": 1}
+    return {"accommodates_min": 1, "accommodates_max": 8, "bedrooms_min": 1, "bedrooms_max": 5}
+
+
+def get_effective_accommodates_bounds(
+    property_type: str,
+    bedrooms: float,
+    other_property_type: str = "",
+    room_type: str = "",
+) -> tuple[int, int]:
+    limits = get_property_type_limits(property_type, other_property_type, room_type)
+    normalized_bedrooms = max(int(bedrooms), max(limits["bedrooms_min"], 1))
+    min_accommodates = limits["accommodates_min"]
+    max_accommodates = min(limits["accommodates_max"], normalized_bedrooms * 3)
+    return min_accommodates, max(min_accommodates, max_accommodates)
+
+
+def get_effective_bedrooms_bounds(
+    property_type: str,
+    accommodates: int,
+    other_property_type: str = "",
+    room_type: str = "",
+) -> tuple[int, int]:
+    limits = get_property_type_limits(property_type, other_property_type, room_type)
+    if limits["bedrooms_max"] == 0:
+        return 0, 0
+    normalized_accommodates = max(int(accommodates), limits["accommodates_min"])
+    min_bedrooms = max(limits["bedrooms_min"], math.ceil(normalized_accommodates / 3.0))
+    max_bedrooms = limits["bedrooms_max"]
+    return min_bedrooms, max(min_bedrooms, max_bedrooms)
+
+
+def get_other_property_type_price_multiplier(other_property_type: str) -> float:
+    subtype = str(other_property_type or "").strip()
+    return OTHER_PROPERTY_TYPE_PRICE_MULTIPLIERS.get(subtype, 1.0)
+
+
+def compute_monotonic_price(
+    base_inputs: dict,
+    enforce_amenity_monotonic: bool = True,
+    enforce_capacity_monotonic: bool = True,
+    enforce_bedroom_monotonic: bool = True,
+    enforce_apartment_studio_gap: bool = True,
+) -> tuple[float, float]:
     city = str(base_inputs.get("city", DEFAULTS["city"])).strip()
     property_type = str(base_inputs.get("property_type", DEFAULTS["property_type"])).strip()
+    other_property_type = str(base_inputs.get("other_property_type", "")).strip()
     room_type = str(base_inputs.get("room_type", DEFAULTS["room_type"])).strip()
     accommodates = safe_int(base_inputs.get("accommodates"), DEFAULTS["accommodates"])
     bedrooms = safe_float(base_inputs.get("bedrooms"), DEFAULTS["bedrooms"])
@@ -1432,6 +1594,30 @@ def compute_monotonic_price(base_inputs: dict, enforce_amenity_monotonic: bool =
         round(property_type_floor_price, 2),
     )
 
+    if property_type == "Other" and other_property_type:
+        final_price_local *= get_other_property_type_price_multiplier(other_property_type)
+
+    final_price_local *= compute_room_type_multiplier(room_type)
+
+    if (
+        enforce_apartment_studio_gap
+        and property_type == "Entire apartment"
+        and str(room_type or "").strip().lower() == "entire place"
+    ):
+        studio_reference_inputs = dict(base_inputs)
+        studio_reference_inputs["property_type"] = "Other"
+        studio_reference_inputs["other_property_type"] = "Studio"
+        studio_reference_inputs["room_type"] = "Entire place"
+        studio_reference_inputs["bedrooms"] = 1
+        _, studio_reference_price = compute_monotonic_price(
+            studio_reference_inputs,
+            enforce_amenity_monotonic=False,
+            enforce_capacity_monotonic=False,
+            enforce_bedroom_monotonic=False,
+            enforce_apartment_studio_gap=False,
+        )
+        final_price_local = max(final_price_local, round(studio_reference_price * 1.30, 2))
+
     final_price_local = max(final_price_local, 15.0)
     final_price_local = min(final_price_local, 5000.0)
 
@@ -1460,6 +1646,8 @@ def compute_monotonic_price(base_inputs: dict, enforce_amenity_monotonic: bool =
             _, reduced_final_price = compute_monotonic_price(
                 reduced_inputs,
                 enforce_amenity_monotonic=False,
+                enforce_capacity_monotonic=False,
+                enforce_bedroom_monotonic=False,
             )
             subset_prices.append(reduced_final_price)
 
@@ -1476,6 +1664,40 @@ def compute_monotonic_price(base_inputs: dict, enforce_amenity_monotonic: bool =
             final_price_local = max(final_price_local, max(subset_prices))
         if subset_required_prices:
             final_price_local = max(final_price_local, max(subset_required_prices))
+
+    if enforce_capacity_monotonic:
+        min_accommodates, _ = get_effective_accommodates_bounds(property_type, bedrooms)
+        if accommodates > min_accommodates:
+            lower_capacity_prices = []
+            for lower_accommodates in range(min_accommodates, accommodates):
+                reduced_inputs = dict(base_inputs)
+                reduced_inputs["accommodates"] = lower_accommodates
+                _, reduced_final_price = compute_monotonic_price(
+                    reduced_inputs,
+                    enforce_amenity_monotonic=enforce_amenity_monotonic,
+                    enforce_capacity_monotonic=False,
+                    enforce_bedroom_monotonic=enforce_bedroom_monotonic,
+                )
+                lower_capacity_prices.append(reduced_final_price)
+            if lower_capacity_prices:
+                final_price_local = max(final_price_local, max(lower_capacity_prices))
+
+    if enforce_bedroom_monotonic:
+        min_bedrooms, _ = get_effective_bedrooms_bounds(property_type, accommodates)
+        if bedrooms > min_bedrooms:
+            lower_bedroom_prices = []
+            for lower_bedrooms in range(min_bedrooms, int(bedrooms)):
+                reduced_inputs = dict(base_inputs)
+                reduced_inputs["bedrooms"] = lower_bedrooms
+                _, reduced_final_price = compute_monotonic_price(
+                    reduced_inputs,
+                    enforce_amenity_monotonic=enforce_amenity_monotonic,
+                    enforce_capacity_monotonic=enforce_capacity_monotonic,
+                    enforce_bedroom_monotonic=False,
+                )
+                lower_bedroom_prices.append(reduced_final_price)
+            if lower_bedroom_prices:
+                final_price_local = max(final_price_local, max(lower_bedroom_prices))
 
     return round(selected_base_price, 2), round(final_price_local, 2)
 
@@ -1545,8 +1767,82 @@ def validate_form(form):
     if ROOM_TYPE_OPTIONS and room_type not in ROOM_TYPE_OPTIONS:
         return "Invalid room type selected."
 
-    if accommodates < 1 or accommodates > 20:
-        return "Accommodates must be between 1 and 20."
+    other_property_type = str(form.get("other_property_type", "")).strip()
+    if property_type == "Other" and other_property_type not in OTHER_PROPERTY_TYPE_OPTIONS:
+        return f"For Other, please choose one of: {OTHER_PROPERTY_TYPE_OPTIONS}."
+
+    allowed_room_types = get_allowed_room_types(property_type, other_property_type)
+    if room_type not in allowed_room_types:
+        return f"For {property_type}, room type must be one of: {allowed_room_types}."
+
+    min_accommodates, max_accommodates = get_effective_accommodates_bounds(
+        property_type,
+        bedrooms,
+        other_property_type,
+        room_type,
+    )
+    min_bedrooms, max_bedrooms = get_effective_bedrooms_bounds(
+        property_type,
+        accommodates,
+        other_property_type,
+        room_type,
+    )
+
+    if property_type == "Entire apartment":
+        if accommodates < min_accommodates or accommodates > max_accommodates:
+            return f"For Entire apartment, accommodates must be between {min_accommodates} and {max_accommodates}."
+        if bedrooms < min_bedrooms or bedrooms > max_bedrooms:
+            return f"For Entire apartment, bedrooms must be between {min_bedrooms} and {max_bedrooms}."
+    elif property_type == "Entire condominium":
+        if accommodates < min_accommodates or accommodates > max_accommodates:
+            return f"For Entire condominium, accommodates must be between {min_accommodates} and {max_accommodates}."
+        if bedrooms < min_bedrooms or bedrooms > max_bedrooms:
+            return f"For Entire condominium, bedrooms must be between {min_bedrooms} and {max_bedrooms}."
+    elif property_type == "Entire house":
+        if accommodates < min_accommodates or accommodates > max_accommodates:
+            return f"For Entire house, accommodates must be between {min_accommodates} and {max_accommodates}."
+        if bedrooms < min_bedrooms or bedrooms > max_bedrooms:
+            return f"For Entire house, bedrooms must be between {min_bedrooms} and {max_bedrooms}."
+    elif property_type == "Entire villa":
+        if accommodates < min_accommodates or accommodates > max_accommodates:
+            return f"For Entire villa, accommodates must be between {min_accommodates} and {max_accommodates}."
+        if bedrooms < min_bedrooms or bedrooms > max_bedrooms:
+            return f"For Entire villa, bedrooms must be between {min_bedrooms} and {max_bedrooms}."
+    elif property_type == "Room in hotel":
+        if accommodates < min_accommodates or accommodates > max_accommodates:
+            return f"For Room in hotel, accommodates must be between {min_accommodates} and {max_accommodates}."
+        if bedrooms < min_bedrooms or bedrooms > max_bedrooms:
+            return f"For Room in hotel, bedrooms must be between {min_bedrooms} and {max_bedrooms}."
+    elif property_type == "Other" and other_property_type == "Studio":
+        if accommodates < min_accommodates or accommodates > max_accommodates:
+            return f"For Studio, accommodates must be between {min_accommodates} and {max_accommodates}."
+        if bedrooms < min_bedrooms or bedrooms > max_bedrooms:
+            return "For Studio, bedrooms must be 1."
+    elif property_type == "Other" and other_property_type == "Cabin":
+        if accommodates < min_accommodates or accommodates > max_accommodates:
+            return f"For Cabin, accommodates must be between {min_accommodates} and {max_accommodates}."
+        if bedrooms < min_bedrooms or bedrooms > max_bedrooms:
+            return f"For Cabin, bedrooms must be between {min_bedrooms} and {max_bedrooms}."
+    elif property_type == "Other" and other_property_type == "Chalet":
+        if accommodates < min_accommodates or accommodates > max_accommodates:
+            return f"For Chalet, accommodates must be between {min_accommodates} and {max_accommodates}."
+        if bedrooms < min_bedrooms or bedrooms > max_bedrooms:
+            return f"For Chalet, bedrooms must be between {min_bedrooms} and {max_bedrooms}."
+    elif property_type == "Other" and other_property_type == "Loft":
+        if accommodates < min_accommodates or accommodates > max_accommodates:
+            return f"For Loft, accommodates must be between {min_accommodates} and {max_accommodates}."
+        if bedrooms < min_bedrooms or bedrooms > max_bedrooms:
+            return "For Loft, bedrooms must be 0."
+    elif room_type == "Shared room":
+        if accommodates < min_accommodates or accommodates > max_accommodates:
+            return f"For Shared room, accommodates must be between {min_accommodates} and {max_accommodates}."
+        if bedrooms < min_bedrooms or bedrooms > max_bedrooms:
+            return "For Shared room, bedrooms must be 1."
+    else:
+        if accommodates < min_accommodates or accommodates > max_accommodates:
+            return f"For Other, accommodates must be between {min_accommodates} and {max_accommodates}."
+        if bedrooms < min_bedrooms or bedrooms > max_bedrooms:
+            return f"For Other, bedrooms must be between {min_bedrooms} and {max_bedrooms}."
 
     if bedrooms < 0 or bedrooms > 10:
         return "Bedrooms must be between 0 and 10."
@@ -1589,11 +1885,13 @@ def build_human_explanation(
     neighbourhood = str(form.get("neighbourhood", "")).strip()
     room_type = str(form.get("room_type", "")).strip()
     property_type = str(form.get("property_type", "")).strip()
+    other_property_type = str(form.get("other_property_type", "")).strip()
     instant_bookable = str(form.get("instant_bookable", "")).strip()
     distance_km = get_distance_from_center(city, neighbourhood)
     review_score = safe_int(form.get("review_scores_rating"), DEFAULTS["review_scores_rating"])
     accommodates = safe_int(form.get("accommodates"), DEFAULTS["accommodates"])
     currency_rate = get_currency_rate(city)
+    local_currency_label = get_local_currency_label(city)
     selected_amenities = form.getlist("amenities")
     amenities_uplift = compute_amenities_uplift(selected_amenities)
     review_uplift = compute_review_uplift(review_score)
@@ -1632,13 +1930,25 @@ def build_human_explanation(
         lines.append(f"The model considered capacity for {accommodates} guests.")
 
     lines.append(f"Property type selected: {property_type}.")
-    lines.append(f"Calibrated estimate in local currency: {final_price_local:,.2f}.")
+    if property_type == "Other" and other_property_type:
+        subtype_multiplier = get_other_property_type_price_multiplier(other_property_type)
+        subtype_percent = abs((subtype_multiplier - 1.0) * 100.0)
+        if math.isclose(subtype_multiplier, 1.0, rel_tol=0.0, abs_tol=1e-9):
+            lines.append(f"Specific other property type selected: {other_property_type}.")
+        else:
+            direction = "premium" if subtype_multiplier > 1.0 else "discount"
+            lines.append(
+                f"Specific other property type selected: {other_property_type}, with an estimated {subtype_percent:.1f}% {direction} adjustment."
+            )
+    lines.append(
+        f"Calibrated estimate in local currency: {format_currency_amount(final_price_local, local_currency_label)}."
+    )
 
     if OUTPUT_CURRENCY == "USD_after_prediction":
         lines.append(f"Converted to USD using city exchange rate ({currency_rate:.6f}).")
-        lines.append(f"Final estimated nightly price in USD: ${final_price_output:,.2f}.")
+        lines.append(f"Final estimated nightly price in USD: {format_currency_amount(final_price_output, 'USD')}.")
     else:
-        lines.append(f"Final estimated nightly price: {final_price_output:,.2f}.")
+        lines.append(f"Final estimated nightly price: {format_currency_amount(final_price_output, local_currency_label)}.")
 
     return lines
 
@@ -1710,14 +2020,20 @@ def home():
                 )
 
                 currency_rate = get_currency_rate(city)
+                local_currency_label = get_local_currency_label(city)
 
                 if OUTPUT_CURRENCY == "USD_after_prediction":
                     final_price_output = round(final_price_local * currency_rate, 2)
-                    currency_symbol = "$"
-                    prediction_text = f"Estimated price per night ({output_currency_label()}): {currency_symbol}{final_price_output:,.2f}"
+                    prediction_text = (
+                        f"Estimated price per night ({output_currency_label()}): "
+                        f"{format_currency_amount(final_price_output, 'USD')}"
+                    )
                 else:
                     final_price_output = final_price_local
-                    prediction_text = f"Estimated price per night ({output_currency_label()}): {final_price_output:,.2f}"
+                    prediction_text = (
+                        f"Estimated price per night ({output_currency_label()}): "
+                        f"{format_currency_amount(final_price_output, local_currency_label)}"
+                    )
 
                 minimum_nights = safe_int(
                     request.form.get("minimum_nights"),
@@ -1728,12 +2044,12 @@ def home():
                 if OUTPUT_CURRENCY == "USD_after_prediction":
                     total_price_text = (
                         f"Estimated total price for minimum stay ({minimum_nights} night(s)) "
-                        f"in {output_currency_label()}: ${total_price_output:,.2f}"
+                        f"in {output_currency_label()}: {format_currency_amount(total_price_output, 'USD')}"
                     )
                 else:
                     total_price_text = (
                         f"Estimated total price for minimum stay ({minimum_nights} night(s)): "
-                        f"{total_price_output:,.2f}"
+                        f"{format_currency_amount(total_price_output, local_currency_label)}"
                     )
 
                 explanation_lines = build_human_explanation(
@@ -1751,10 +2067,19 @@ def home():
                         "raw_model_estimate_local": round(base_price_local, 2),
                         "final_price_local": round(final_price_local, 2),
                         "final_price_output": round(final_price_output, 2),
+                        "local_currency": get_local_currency_label(city),
+                        "output_currency_label": output_currency_label(),
+                        "formatted_final_price_local": format_currency_amount(final_price_local, local_currency_label),
+                        "formatted_final_price_output": (
+                            format_currency_amount(final_price_output, "USD")
+                            if OUTPUT_CURRENCY == "USD_after_prediction"
+                            else format_currency_amount(final_price_output, local_currency_label)
+                        ),
                         "minimum_nights": minimum_nights,
                         "city": city,
                         "neighbourhood": neighbourhood,
                         "property_type": str(request.form.get("property_type", "")).strip(),
+                        "other_property_type": str(request.form.get("other_property_type", "")).strip(),
                         "room_type": str(request.form.get("room_type", "")).strip(),
                         "distance_from_center_km": round(get_distance_from_center(city, neighbourhood), 2),
                         "review_score": review_score,
@@ -1768,6 +2093,7 @@ def home():
                         "human_explanation_lines": explanation_lines or [],
                         "distance_from_center_km": round(get_distance_from_center(city, neighbourhood), 2),
                         "property_type": str(request.form.get("property_type", "")).strip(),
+                        "other_property_type": str(request.form.get("other_property_type", "")).strip(),
                         "room_type": str(request.form.get("room_type", "")).strip(),
                     }
                 )
@@ -1789,6 +2115,9 @@ def home():
         city_options=CITY_OPTIONS,
         property_options=PROPERTY_TYPE_OPTIONS,
         room_options=ROOM_TYPE_OPTIONS,
+        property_type_room_type_rules=PROPERTY_TYPE_ROOM_TYPE_RULES,
+        other_property_type_room_type_rules=OTHER_PROPERTY_TYPE_ROOM_TYPE_RULES,
+        other_property_type_options=OTHER_PROPERTY_TYPE_OPTIONS,
         instant_bookable_options=INSTANT_BOOKABLE_OPTIONS,
         city_neighbourhood_map=CITY_NEIGHBOURHOOD_MAP,
         neighbourhood_coordinates=NEIGHBOURHOOD_COORDINATES,

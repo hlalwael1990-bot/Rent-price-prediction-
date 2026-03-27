@@ -7,13 +7,18 @@ from src.app_flask import (
     build_chatbot_system_prompt,
     build_human_explanation,
     build_feature_row_from_inputs,
+    build_prediction_inputs,
     compute_min_amenity_increment_local,
     compute_monotonic_price,
+    get_effective_accommodates_bounds,
+    get_effective_bedrooms_bounds,
+    get_other_property_type_price_multiplier,
     compute_property_type_amenity_bonus_local,
     compute_property_type_amenity_factor,
     compute_property_type_floor_price,
     compute_property_type_multiplier,
     compute_fixed_amenity_bonus_local,
+    validate_form,
 )
 
 
@@ -73,7 +78,7 @@ class ExplanationTests(unittest.TestCase):
 
         self.assertNotIn("54.37", " ".join(lines))
         self.assertIn(
-            "Calibrated estimate in local currency: 230.30.",
+            "Calibrated estimate in local currency: $230.30 (USD).",
             lines,
         )
 
@@ -88,10 +93,630 @@ class ExplanationTests(unittest.TestCase):
 
         self.assertIn("Do not mention internal raw model anchors", prompt)
         self.assertIn("For entire houses and villas", prompt)
+        self.assertIn("Never use the `$` symbol for local currency unless the local currency is actually USD.", prompt)
+        self.assertIn("show each one with its currency symbol and currency code explicitly", prompt)
 
     def test_fixed_bonus_is_positive_for_bonus_amenities(self):
         bonus = compute_fixed_amenity_bonus_local("Paris", ["Dedicated workspace", "TV"])
         self.assertGreater(bonus, 0)
+
+    def test_apartment_four_bedrooms_requires_higher_minimum_accommodates(self):
+        minimum, maximum = get_effective_accommodates_bounds("Entire apartment", 4)
+        self.assertEqual(minimum, 1)
+        self.assertEqual(maximum, 8)
+
+    def test_villa_seven_bedrooms_supports_up_to_twelve_accommodates(self):
+        minimum, maximum = get_effective_accommodates_bounds("Entire villa", 7)
+        self.assertEqual(minimum, 1)
+        self.assertEqual(maximum, 12)
+
+    def test_house_and_villa_can_start_from_one_accommodate(self):
+        house_min, house_max = get_effective_accommodates_bounds("Entire house", 2)
+        villa_min, villa_max = get_effective_accommodates_bounds("Entire villa", 3)
+        self.assertEqual((house_min, house_max), (1, 6))
+        self.assertEqual((villa_min, villa_max), (1, 9))
+
+    def test_villa_requires_at_least_three_bedrooms(self):
+        min_bedrooms, max_bedrooms = get_effective_bedrooms_bounds("Entire villa", 2)
+        self.assertEqual(min_bedrooms, 3)
+        self.assertEqual(max_bedrooms, 7)
+
+    def test_condominium_uses_apartment_style_limits(self):
+        minimum, maximum = get_effective_accommodates_bounds("Entire condominium", 4)
+        self.assertEqual(minimum, 1)
+        self.assertEqual(maximum, 8)
+
+    def test_room_in_hotel_is_single_bedroom_and_small_capacity(self):
+        minimum, maximum = get_effective_accommodates_bounds("Room in hotel", 1)
+        self.assertEqual(minimum, 1)
+        self.assertEqual(maximum, 3)
+        min_bedrooms, max_bedrooms = get_effective_bedrooms_bounds("Room in hotel", 2)
+        self.assertEqual(min_bedrooms, 1)
+        self.assertEqual(max_bedrooms, 1)
+
+    def test_shared_room_is_single_bedroom_and_small_capacity(self):
+        minimum, maximum = get_effective_accommodates_bounds("Other", 1, "Guest house", "Shared room")
+        self.assertEqual(minimum, 1)
+        self.assertEqual(maximum, 3)
+        min_bedrooms, max_bedrooms = get_effective_bedrooms_bounds("Other", 2, "Guest house", "Shared room")
+        self.assertEqual(min_bedrooms, 1)
+        self.assertEqual(max_bedrooms, 1)
+
+    def test_other_type_uses_moderate_limits(self):
+        minimum, maximum = get_effective_accommodates_bounds("Other", 5)
+        self.assertEqual(minimum, 1)
+        self.assertEqual(maximum, 8)
+
+    def test_studio_uses_single_bedroom_limits(self):
+        minimum, maximum = get_effective_accommodates_bounds("Other", 1, "Studio")
+        self.assertEqual(minimum, 1)
+        self.assertEqual(maximum, 3)
+        min_bedrooms, max_bedrooms = get_effective_bedrooms_bounds("Other", 2, "Studio")
+        self.assertEqual(min_bedrooms, 1)
+        self.assertEqual(max_bedrooms, 1)
+
+    def test_cabin_uses_requested_limits(self):
+        minimum, maximum = get_effective_accommodates_bounds("Other", 3, "Cabin")
+        self.assertEqual(minimum, 1)
+        self.assertEqual(maximum, 6)
+        min_bedrooms, max_bedrooms = get_effective_bedrooms_bounds("Other", 4, "Cabin")
+        self.assertEqual(min_bedrooms, 2)
+        self.assertEqual(max_bedrooms, 3)
+
+    def test_chalet_uses_requested_limits(self):
+        minimum, maximum = get_effective_accommodates_bounds("Other", 3, "Chalet")
+        self.assertEqual(minimum, 1)
+        self.assertEqual(maximum, 6)
+        min_bedrooms, max_bedrooms = get_effective_bedrooms_bounds("Other", 4, "Chalet")
+        self.assertEqual(min_bedrooms, 2)
+        self.assertEqual(max_bedrooms, 3)
+
+    def test_loft_uses_zero_bedroom_limits(self):
+        minimum, maximum = get_effective_accommodates_bounds("Other", 0, "Loft")
+        self.assertEqual(minimum, 1)
+        self.assertEqual(maximum, 3)
+        min_bedrooms, max_bedrooms = get_effective_bedrooms_bounds("Other", 2, "Loft")
+        self.assertEqual(min_bedrooms, 0)
+        self.assertEqual(max_bedrooms, 0)
+
+    def test_validation_rejects_invalid_room_type_for_entire_condominium(self):
+        form = MultiDict(
+            [
+                ("city", "Paris"),
+                ("neighbourhood", "Batignolles-Monceau"),
+                ("property_type", "Entire condominium"),
+                ("room_type", "Hotel room"),
+                ("instant_bookable", "No"),
+                ("accommodates", "4"),
+                ("bedrooms", "4"),
+                ("minimum_nights", "2"),
+                ("maximum_nights", "30"),
+                ("review_scores_rating", "96"),
+            ]
+        )
+
+        message = validate_form(form)
+        self.assertEqual(message, "For Entire condominium, room type must be one of: ['Entire place'].")
+
+    def test_validation_accepts_room_in_hotel_with_hotel_room(self):
+        form = MultiDict(
+            [
+                ("city", "Paris"),
+                ("neighbourhood", "Batignolles-Monceau"),
+                ("property_type", "Room in hotel"),
+                ("room_type", "Hotel room"),
+                ("instant_bookable", "No"),
+                ("accommodates", "2"),
+                ("bedrooms", "1"),
+                ("minimum_nights", "2"),
+                ("maximum_nights", "30"),
+                ("review_scores_rating", "96"),
+            ]
+        )
+
+        message = validate_form(form)
+        self.assertIsNone(message)
+
+    def test_validation_rejects_private_room_for_room_in_hotel(self):
+        form = MultiDict(
+            [
+                ("city", "Paris"),
+                ("neighbourhood", "Batignolles-Monceau"),
+                ("property_type", "Room in hotel"),
+                ("room_type", "Private room"),
+                ("instant_bookable", "No"),
+                ("accommodates", "2"),
+                ("bedrooms", "1"),
+                ("minimum_nights", "2"),
+                ("maximum_nights", "30"),
+                ("review_scores_rating", "96"),
+            ]
+        )
+
+        message = validate_form(form)
+        self.assertEqual(message, "For Room in hotel, room type must be one of: ['Hotel room'].")
+
+    def test_validation_accepts_private_room_for_entire_apartment(self):
+        form = MultiDict(
+            [
+                ("city", "Paris"),
+                ("neighbourhood", "Batignolles-Monceau"),
+                ("property_type", "Entire apartment"),
+                ("room_type", "Private room"),
+                ("instant_bookable", "No"),
+                ("accommodates", "2"),
+                ("bedrooms", "1"),
+                ("minimum_nights", "2"),
+                ("maximum_nights", "30"),
+                ("review_scores_rating", "96"),
+            ]
+        )
+
+        message = validate_form(form)
+        self.assertIsNone(message)
+
+    def test_validation_accepts_private_room_for_entire_house(self):
+        form = MultiDict(
+            [
+                ("city", "Paris"),
+                ("neighbourhood", "Batignolles-Monceau"),
+                ("property_type", "Entire house"),
+                ("room_type", "Private room"),
+                ("instant_bookable", "No"),
+                ("accommodates", "2"),
+                ("bedrooms", "2"),
+                ("minimum_nights", "2"),
+                ("maximum_nights", "30"),
+                ("review_scores_rating", "96"),
+            ]
+        )
+
+        message = validate_form(form)
+        self.assertIsNone(message)
+
+    def test_validation_requires_specific_other_property_type(self):
+        form = MultiDict(
+            [
+                ("city", "Paris"),
+                ("neighbourhood", "Batignolles-Monceau"),
+                ("property_type", "Other"),
+                ("room_type", "Private room"),
+                ("instant_bookable", "No"),
+                ("accommodates", "2"),
+                ("bedrooms", "1"),
+                ("minimum_nights", "2"),
+                ("maximum_nights", "30"),
+                ("review_scores_rating", "96"),
+                ("other_property_type", ""),
+            ]
+        )
+
+        message = validate_form(form)
+        self.assertEqual(message, "For Other, please choose one of: ['Studio', 'Chalet', 'Guest house', 'Cabin', 'Loft'].")
+
+    def test_validation_accepts_specific_other_property_type(self):
+        form = MultiDict(
+            [
+                ("city", "Paris"),
+                ("neighbourhood", "Batignolles-Monceau"),
+                ("property_type", "Other"),
+                ("room_type", "Entire place"),
+                ("instant_bookable", "No"),
+                ("accommodates", "2"),
+                ("bedrooms", "1"),
+                ("minimum_nights", "2"),
+                ("maximum_nights", "30"),
+                ("review_scores_rating", "96"),
+                ("other_property_type", "Studio"),
+            ]
+        )
+
+        message = validate_form(form)
+        self.assertIsNone(message)
+
+    def test_validation_rejects_non_entire_place_for_studio(self):
+        form = MultiDict(
+            [
+                ("city", "Paris"),
+                ("neighbourhood", "Batignolles-Monceau"),
+                ("property_type", "Other"),
+                ("room_type", "Private room"),
+                ("instant_bookable", "No"),
+                ("accommodates", "2"),
+                ("bedrooms", "1"),
+                ("minimum_nights", "2"),
+                ("maximum_nights", "30"),
+                ("review_scores_rating", "96"),
+                ("other_property_type", "Studio"),
+            ]
+        )
+
+        message = validate_form(form)
+        self.assertEqual(message, "For Other, room type must be one of: ['Entire place'].")
+
+    def test_validation_rejects_studio_with_more_than_one_bedroom(self):
+        form = MultiDict(
+            [
+                ("city", "Paris"),
+                ("neighbourhood", "Batignolles-Monceau"),
+                ("property_type", "Other"),
+                ("room_type", "Entire place"),
+                ("instant_bookable", "No"),
+                ("accommodates", "2"),
+                ("bedrooms", "2"),
+                ("minimum_nights", "2"),
+                ("maximum_nights", "30"),
+                ("review_scores_rating", "96"),
+                ("other_property_type", "Studio"),
+            ]
+        )
+
+        message = validate_form(form)
+        self.assertEqual(message, "For Studio, bedrooms must be 1.")
+
+    def test_validation_rejects_cabin_with_too_many_bedrooms(self):
+        form = MultiDict(
+            [
+                ("city", "Paris"),
+                ("neighbourhood", "Batignolles-Monceau"),
+                ("property_type", "Other"),
+                ("room_type", "Entire place"),
+                ("instant_bookable", "No"),
+                ("accommodates", "4"),
+                ("bedrooms", "4"),
+                ("minimum_nights", "2"),
+                ("maximum_nights", "30"),
+                ("review_scores_rating", "96"),
+                ("other_property_type", "Cabin"),
+            ]
+        )
+
+        message = validate_form(form)
+        self.assertEqual(message, "For Cabin, bedrooms must be between 2 and 3.")
+
+    def test_validation_rejects_cabin_with_too_many_accommodates(self):
+        form = MultiDict(
+            [
+                ("city", "Paris"),
+                ("neighbourhood", "Batignolles-Monceau"),
+                ("property_type", "Other"),
+                ("room_type", "Entire place"),
+                ("instant_bookable", "No"),
+                ("accommodates", "7"),
+                ("bedrooms", "3"),
+                ("minimum_nights", "2"),
+                ("maximum_nights", "30"),
+                ("review_scores_rating", "96"),
+                ("other_property_type", "Cabin"),
+            ]
+        )
+
+        message = validate_form(form)
+        self.assertEqual(message, "For Cabin, accommodates must be between 1 and 6.")
+
+    def test_validation_rejects_chalet_with_too_many_bedrooms(self):
+        form = MultiDict(
+            [
+                ("city", "Paris"),
+                ("neighbourhood", "Batignolles-Monceau"),
+                ("property_type", "Other"),
+                ("room_type", "Entire place"),
+                ("instant_bookable", "No"),
+                ("accommodates", "4"),
+                ("bedrooms", "4"),
+                ("minimum_nights", "2"),
+                ("maximum_nights", "30"),
+                ("review_scores_rating", "96"),
+                ("other_property_type", "Chalet"),
+            ]
+        )
+
+        message = validate_form(form)
+        self.assertEqual(message, "For Chalet, bedrooms must be between 2 and 3.")
+
+    def test_validation_rejects_loft_with_non_zero_bedrooms(self):
+        form = MultiDict(
+            [
+                ("city", "Paris"),
+                ("neighbourhood", "Batignolles-Monceau"),
+                ("property_type", "Other"),
+                ("room_type", "Entire place"),
+                ("instant_bookable", "No"),
+                ("accommodates", "2"),
+                ("bedrooms", "1"),
+                ("minimum_nights", "2"),
+                ("maximum_nights", "30"),
+                ("review_scores_rating", "96"),
+                ("other_property_type", "Loft"),
+            ]
+        )
+
+        message = validate_form(form)
+        self.assertEqual(message, "For Loft, bedrooms must be 0.")
+
+    def test_validation_rejects_hotel_room_for_guest_house(self):
+        form = MultiDict(
+            [
+                ("city", "Paris"),
+                ("neighbourhood", "Batignolles-Monceau"),
+                ("property_type", "Other"),
+                ("room_type", "Hotel room"),
+                ("instant_bookable", "No"),
+                ("accommodates", "2"),
+                ("bedrooms", "1"),
+                ("minimum_nights", "2"),
+                ("maximum_nights", "30"),
+                ("review_scores_rating", "96"),
+                ("other_property_type", "Guest house"),
+            ]
+        )
+
+        message = validate_form(form)
+        self.assertEqual(
+            message,
+            "For Other, room type must be one of: ['Entire place', 'Private room', 'Shared room'].",
+        )
+
+    def test_validation_rejects_hotel_room_for_cabin(self):
+        form = MultiDict(
+            [
+                ("city", "Paris"),
+                ("neighbourhood", "Batignolles-Monceau"),
+                ("property_type", "Other"),
+                ("room_type", "Hotel room"),
+                ("instant_bookable", "No"),
+                ("accommodates", "2"),
+                ("bedrooms", "1"),
+                ("minimum_nights", "2"),
+                ("maximum_nights", "30"),
+                ("review_scores_rating", "96"),
+                ("other_property_type", "Cabin"),
+            ]
+        )
+
+        message = validate_form(form)
+        self.assertEqual(
+            message,
+            "For Other, room type must be one of: ['Entire place', 'Private room', 'Shared room'].",
+        )
+
+    def test_validation_rejects_shared_room_with_more_than_one_bedroom(self):
+        form = MultiDict(
+            [
+                ("city", "Paris"),
+                ("neighbourhood", "Batignolles-Monceau"),
+                ("property_type", "Other"),
+                ("room_type", "Shared room"),
+                ("instant_bookable", "No"),
+                ("accommodates", "2"),
+                ("bedrooms", "2"),
+                ("minimum_nights", "2"),
+                ("maximum_nights", "30"),
+                ("review_scores_rating", "96"),
+                ("other_property_type", "Guest house"),
+            ]
+        )
+
+        message = validate_form(form)
+        self.assertEqual(message, "For Shared room, bedrooms must be 1.")
+
+    def test_build_prediction_inputs_keeps_other_property_type(self):
+        form = MultiDict(
+            [
+                ("city", "Paris"),
+                ("neighbourhood", "Batignolles-Monceau"),
+                ("property_type", "Other"),
+                ("other_property_type", "Studio"),
+                ("room_type", "Entire place"),
+                ("instant_bookable", "No"),
+                ("accommodates", "1"),
+                ("bedrooms", "1"),
+                ("minimum_nights", "2"),
+                ("maximum_nights", "30"),
+                ("review_scores_rating", "96"),
+            ]
+        )
+
+        inputs = build_prediction_inputs(form)
+        self.assertEqual(inputs["other_property_type"], "Studio")
+
+    def test_other_property_type_multipliers_follow_expected_order(self):
+        self.assertLess(
+            get_other_property_type_price_multiplier("Studio"),
+            get_other_property_type_price_multiplier("Guest house"),
+        )
+        self.assertLess(
+            get_other_property_type_price_multiplier("Guest house"),
+            get_other_property_type_price_multiplier("Loft"),
+        )
+        self.assertLess(
+            get_other_property_type_price_multiplier("Loft"),
+            get_other_property_type_price_multiplier("Cabin"),
+        )
+        self.assertLess(
+            get_other_property_type_price_multiplier("Cabin"),
+            get_other_property_type_price_multiplier("Chalet"),
+        )
+
+    def test_other_property_type_changes_price(self):
+        base_inputs = {
+            "city": "Paris",
+            "neighbourhood": "Batignolles-Monceau",
+            "property_type": "Other",
+            "room_type": "Entire place",
+            "instant_bookable": "No",
+            "accommodates": 1,
+            "bedrooms": 1,
+            "minimum_nights": 2,
+            "maximum_nights": 30,
+            "review_scores_rating": 96,
+            "amenities": [],
+        }
+
+        _, studio_price = compute_monotonic_price({**base_inputs, "other_property_type": "Studio"})
+        _, chalet_price = compute_monotonic_price({**base_inputs, "other_property_type": "Chalet"})
+
+        self.assertGreater(chalet_price, studio_price)
+
+    def test_studio_entire_place_is_less_expensive_than_entire_apartment(self):
+        base_inputs = {
+            "city": "Paris",
+            "neighbourhood": "Batignolles-Monceau",
+            "room_type": "Entire place",
+            "instant_bookable": "No",
+            "accommodates": 2,
+            "bedrooms": 1,
+            "minimum_nights": 2,
+            "maximum_nights": 30,
+            "review_scores_rating": 96,
+            "amenities": [],
+        }
+
+        _, apartment_price = compute_monotonic_price({**base_inputs, "property_type": "Entire apartment"})
+        _, studio_price = compute_monotonic_price(
+            {**base_inputs, "property_type": "Other", "other_property_type": "Studio"}
+        )
+
+        self.assertLess(studio_price, apartment_price)
+        self.assertGreaterEqual(apartment_price, round(studio_price * 1.30, 2))
+
+    def test_entire_apartment_is_more_expensive_than_shared_room_for_similar_inputs(self):
+        base_inputs = {
+            "city": "Paris",
+            "neighbourhood": "Batignolles-Monceau",
+            "instant_bookable": "No",
+            "accommodates": 2,
+            "bedrooms": 1,
+            "minimum_nights": 2,
+            "maximum_nights": 30,
+            "review_scores_rating": 96,
+            "amenities": [],
+        }
+
+        _, apartment_price = compute_monotonic_price(
+            {**base_inputs, "property_type": "Entire apartment", "room_type": "Entire place"}
+        )
+        _, shared_room_price = compute_monotonic_price(
+            {
+                **base_inputs,
+                "property_type": "Other",
+                "other_property_type": "Guest house",
+                "room_type": "Shared room",
+            }
+        )
+
+        self.assertGreater(apartment_price, shared_room_price)
+
+    def test_shared_room_is_at_most_half_of_entire_place_for_similar_inputs(self):
+        base_inputs = {
+            "city": "Paris",
+            "neighbourhood": "Batignolles-Monceau",
+            "property_type": "Other",
+            "other_property_type": "Guest house",
+            "instant_bookable": "No",
+            "accommodates": 2,
+            "bedrooms": 1,
+            "minimum_nights": 2,
+            "maximum_nights": 30,
+            "review_scores_rating": 96,
+            "amenities": [],
+        }
+
+        _, entire_place_price = compute_monotonic_price({**base_inputs, "room_type": "Entire place"})
+        _, shared_room_price = compute_monotonic_price({**base_inputs, "room_type": "Shared room"})
+
+        self.assertLessEqual(shared_room_price, entire_place_price * 0.5)
+
+    def test_explanation_mentions_other_property_type_adjustment(self):
+        form = MultiDict(
+            [
+                ("city", "Paris"),
+                ("neighbourhood", "Batignolles-Monceau"),
+                ("property_type", "Other"),
+                ("other_property_type", "Chalet"),
+                ("room_type", "Entire place"),
+                ("instant_bookable", "No"),
+                ("accommodates", "2"),
+                ("bedrooms", "1"),
+                ("minimum_nights", "2"),
+                ("maximum_nights", "30"),
+                ("review_scores_rating", "96"),
+            ]
+        )
+
+        lines = build_human_explanation(
+            form=form,
+            base_price_local=100.0,
+            final_price_local=118.0,
+            final_price_output=118.0,
+            amenities_count=0,
+        )
+
+        joined = " ".join(lines)
+        self.assertIn("Specific other property type selected: Chalet", joined)
+        self.assertIn("premium adjustment", joined)
+
+    def test_validation_accepts_apartment_four_bedrooms_with_one_guest(self):
+        form = MultiDict(
+            [
+                ("city", "Paris"),
+                ("neighbourhood", "Batignolles-Monceau"),
+                ("property_type", "Entire apartment"),
+                ("room_type", "Entire place"),
+                ("instant_bookable", "No"),
+                ("accommodates", "1"),
+                ("bedrooms", "4"),
+                ("minimum_nights", "2"),
+                ("maximum_nights", "30"),
+                ("review_scores_rating", "96"),
+            ]
+        )
+
+        message = validate_form(form)
+        self.assertIsNone(message)
+
+    def test_validation_rejects_villa_with_two_bedrooms(self):
+        form = MultiDict(
+            [
+                ("city", "Paris"),
+                ("neighbourhood", "Batignolles-Monceau"),
+                ("property_type", "Entire villa"),
+                ("room_type", "Entire place"),
+                ("instant_bookable", "No"),
+                ("accommodates", "4"),
+                ("bedrooms", "2"),
+                ("minimum_nights", "2"),
+                ("maximum_nights", "30"),
+                ("review_scores_rating", "96"),
+            ]
+        )
+
+        message = validate_form(form)
+        self.assertEqual(message, "For Entire villa, bedrooms must be between 3 and 7.")
+
+    def test_villa_price_does_not_drop_when_accommodates_increase(self):
+        base_inputs = {
+            "city": "Paris",
+            "neighbourhood": "Batignolles-Monceau",
+            "property_type": "Entire villa",
+            "room_type": "Entire place",
+            "instant_bookable": "No",
+            "accommodates": 9,
+            "bedrooms": 7,
+            "minimum_nights": 5,
+            "maximum_nights": 30,
+            "review_scores_rating": 96,
+            "amenities": ["Wifi"],
+        }
+
+        _, price_9 = compute_monotonic_price(base_inputs)
+        _, price_10 = compute_monotonic_price({**base_inputs, "accommodates": 10})
+        _, price_11 = compute_monotonic_price({**base_inputs, "accommodates": 11})
+        _, price_12 = compute_monotonic_price({**base_inputs, "accommodates": 12})
+
+        self.assertGreaterEqual(price_10, price_9)
+        self.assertGreaterEqual(price_11, price_10)
+        self.assertGreaterEqual(price_12, price_11)
 
     def test_metadata_uses_clean_mexico_city_neighbourhood_name(self):
         neighbourhoods = CITY_NEIGHBOURHOOD_MAP["Mexico City"]
