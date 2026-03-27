@@ -409,9 +409,14 @@ def build_chatbot_system_prompt(listing_snapshot: dict | None = None, response_l
         if v is not None and v != "" and v != []
     }
     prediction_snapshot = get_prediction_snapshot()
+    safe_prediction_snapshot = {
+        k: v
+        for k, v in prediction_snapshot.items()
+        if k != "raw_model_estimate_local"
+    }
     explanation_snapshot = get_project_explanation_snapshot()
     snapshot_text = json.dumps(filtered_snapshot, ensure_ascii=False)
-    prediction_text = json.dumps(prediction_snapshot, ensure_ascii=False)
+    prediction_text = json.dumps(safe_prediction_snapshot, ensure_ascii=False)
     explanation_text = json.dumps(explanation_snapshot, ensure_ascii=False)
     metadata_text = json.dumps(
         {
@@ -437,6 +442,9 @@ def build_chatbot_system_prompt(listing_snapshot: dict | None = None, response_l
         "When the user asks for cheapest, best, or comparison questions, answer based on the trained model, metadata, and the current dashboard context only. "
         "Do not claim to retrieve real listings from a listings table or dataset file. "
         "When explaining a price, explicitly consider and mention distance from center, property type, room type, guest capacity, review score, amenities, and output currency whenever they are available in context. "
+        "Use `final_price_local` and `final_price_output` as the effective estimate. "
+        "Do not mention internal raw model anchors, pre-calibration values, or intermediate base estimates unless the developer explicitly asks for debugging details. "
+        "For entire houses and villas, explain the result through property-type floor logic, calibration, amenities, review uplift, and other visible pricing factors only. "
         "If the user asks something unrelated to the project, answer briefly and then steer back to project context when appropriate. "
         "Do not claim you were trained on private project data; instead, use the project context provided to you. "
         f"Current listing form context: {snapshot_text}. "
@@ -1624,7 +1632,6 @@ def build_human_explanation(
         lines.append(f"The model considered capacity for {accommodates} guests.")
 
     lines.append(f"Property type selected: {property_type}.")
-    lines.append(f"Base model estimate in local currency: {base_price_local:,.2f}.")
     lines.append(f"Calibrated estimate in local currency: {final_price_local:,.2f}.")
 
     if OUTPUT_CURRENCY == "USD_after_prediction":
@@ -1741,7 +1748,7 @@ def home():
                     {
                         "prediction_text": prediction_text,
                         "total_price_text": total_price_text,
-                        "base_price_local": round(base_price_local, 2),
+                        "raw_model_estimate_local": round(base_price_local, 2),
                         "final_price_local": round(final_price_local, 2),
                         "final_price_output": round(final_price_output, 2),
                         "minimum_nights": minimum_nights,
@@ -1752,6 +1759,7 @@ def home():
                         "distance_from_center_km": round(get_distance_from_center(city, neighbourhood), 2),
                         "review_score": review_score,
                         "selected_amenities": selected_amenities,
+                        "pricing_note": "The raw model estimate is a pre-calibration anchor. Final price uses calibration, review and amenity uplifts, and property-type floor logic when applicable.",
                     }
                 )
 

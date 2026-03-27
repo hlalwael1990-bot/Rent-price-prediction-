@@ -4,6 +4,7 @@ from werkzeug.datastructures import MultiDict
 
 from src.app_flask import (
     CITY_NEIGHBOURHOOD_MAP,
+    build_chatbot_system_prompt,
     build_human_explanation,
     build_feature_row_from_inputs,
     compute_min_amenity_increment_local,
@@ -48,6 +49,45 @@ class ExplanationTests(unittest.TestCase):
             "Kitchen applied an additional fixed premium in the final price calculation.",
             lines,
         )
+
+    def test_explanation_does_not_show_raw_model_estimate(self):
+        form = MultiDict(
+            [
+                ("city", "New York"),
+                ("neighbourhood", "Allerton"),
+                ("room_type", "Entire place"),
+                ("property_type", "Entire villa"),
+                ("instant_bookable", "No"),
+                ("review_scores_rating", "0"),
+                ("accommodates", "1"),
+            ]
+        )
+
+        lines = build_human_explanation(
+            form=form,
+            base_price_local=54.37,
+            final_price_local=230.30,
+            final_price_output=230.30,
+            amenities_count=0,
+        )
+
+        self.assertNotIn("54.37", " ".join(lines))
+        self.assertIn(
+            "Calibrated estimate in local currency: 230.30.",
+            lines,
+        )
+
+    def test_chatbot_prompt_hides_raw_model_anchor_details(self):
+        prompt = build_chatbot_system_prompt(
+            listing_snapshot={
+                "property_type": "Entire villa",
+                "room_type": "Entire place",
+            },
+            response_language="English",
+        )
+
+        self.assertIn("Do not mention internal raw model anchors", prompt)
+        self.assertIn("For entire houses and villas", prompt)
 
     def test_fixed_bonus_is_positive_for_bonus_amenities(self):
         bonus = compute_fixed_amenity_bonus_local("Paris", ["Dedicated workspace", "TV"])
