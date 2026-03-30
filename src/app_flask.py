@@ -2,9 +2,12 @@ import os
 import json
 import math
 import random
+import re
 import warnings
 import urllib.error
 import urllib.request
+import uuid
+from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
 import joblib
@@ -20,6 +23,7 @@ SRC_DIR = os.path.join(BASE_DIR, "src")
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 MODEL_DIR = os.path.join(BASE_DIR, "model")
+CHAT_MEMORY_DIR = os.path.join(SRC_DIR, "chat_memory")
 ENV_PATH = os.path.join(SRC_DIR, ".env")
 
 METADATA_PATH = os.path.join(SRC_DIR, "metadata.json")
@@ -66,6 +70,8 @@ LOGIN_PASSWORD = os.getenv("PROJECT_LOGIN_PASSWORD", "").strip()
 OPENAI_API_KEY = normalize_api_key(os.getenv("OPENAI_API_KEY", ""))
 OPENAI_CHAT_MODEL = os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini").strip() or "gpt-4o-mini"
 CHAT_HISTORY_LIMIT = 12
+PROMPT_RECENT_HISTORY_LIMIT = 12
+PROMPT_HISTORY_CHAR_BUDGET = 8000
 
 
 # =========================================================
@@ -115,16 +121,203 @@ def chatbot_is_configured():
     return bool(OPENAI_API_KEY)
 
 
-def get_chat_history() -> list[dict]:
+def ensure_chat_memory_dir():
+    os.makedirs(CHAT_MEMORY_DIR, exist_ok=True)
+
+
+def get_chat_session_id() -> str:
     if not has_request_context():
-        return []
+        return ""
 
-    history = session.get("chat_history", [])
+    session_id = str(session.get("chat_session_id", "")).strip()
+    if not session_id:
+        session_id = uuid.uuid4().hex
+        session["chat_session_id"] = session_id
+        session.modified = True
+
+    return session_id
+
+
+def get_chat_store_path(session_id: str) -> str:
+    safe_session_id = re.sub(r"[^a-zA-Z0-9_-]", "", str(session_id or "").strip())
+    if not safe_session_id:
+        safe_session_id = "anonymous"
+
+    ensure_chat_memory_dir()
+    return os.path.join(CHAT_MEMORY_DIR, f"{safe_session_id}.json")
+
+
+def default_chat_state() -> dict:
+    return {
+        "history": [],
+        "learning": {
+            "cities": [],
+            "neighbourhoods": [],
+            "property_types": [],
+            "other_property_types": [],
+            "room_types": [],
+            "amenities": [],
+            "comparison_requests": [],
+            "user_goals": [],
+        },
+    }
+
+
+def load_chat_state() -> dict:
+    if not has_request_context():
+        return default_chat_state()
+
+    session_id = get_chat_session_id()
+    if not session_id:
+        return default_chat_state()
+
+    store_path = get_chat_store_path(session_id)
+    if not os.path.exists(store_path):
+        return default_chat_state()
+
+    try:
+        with open(store_path, "r", encoding="utf-8") as chat_file:
+            data = json.load(chat_file)
+    except Exception:
+        return default_chat_state()
+
+    if not isinstance(data, dict):
+        return default_chat_state()
+
+    history = data.get("history", [])
+    learning = data.get("learning", {})
     if not isinstance(history, list):
-        return []
+        history = []
+    if not isinstance(learning, dict):
+        learning = default_chat_state()["learning"]
 
+    return {
+        "history": history,
+        "learning": {
+            "cities": learning.get("cities", []) if isinstance(learning.get("cities", []), list) else [],
+            "neighbourhoods": learning.get("neighbourhoods", []) if isinstance(learning.get("neighbourhoods", []), list) else [],
+            "property_types": learning.get("property_types", []) if isinstance(learning.get("property_types", []), list) else [],
+            "other_property_types": learning.get("other_property_types", []) if isinstance(learning.get("other_property_types", []), list) else [],
+            "room_types": learning.get("room_types", []) if isinstance(learning.get("room_types", []), list) else [],
+            "amenities": learning.get("amenities", []) if isinstance(learning.get("amenities", []), list) else [],
+            "comparison_requests": learning.get("comparison_requests", []) if isinstance(learning.get("comparison_requests", []), list) else [],
+            "user_goals": learning.get("user_goals", []) if isinstance(learning.get("user_goals", []), list) else [],
+        },
+    }
+
+
+def save_chat_state(chat_state: dict):
+    if not has_request_context():
+        return
+
+    session_id = get_chat_session_id()
+    if not session_id:
+        return
+
+    store_path = get_chat_store_path(session_id)
+    with open(store_path, "w", encoding="utf-8") as chat_file:
+        json.dump(chat_state, chat_file, ensure_ascii=False, indent=2)
+
+
+def append_unique_memory(memory_list: list, value: str, max_items: int = 20):
+    cleaned = str(value or "").strip()
+    if not cleaned:
+        return
+
+    if cleaned in memory_list:
+        memory_list.remove(cleaned)
+    memory_list.append(cleaned)
+
+    if len(memory_list) > max_items:
+        del memory_list[:-max_items]
+
+
+def extract_learning_from_turn(user_message: str, listing_snapshot: dict | None = None) -> dict:
+    snapshot = listing_snapshot if isinstance(listing_snapshot, dict) else {}
+    lowered_message = str(user_message or "").strip().lower()
+    learning = default_chat_state()["learning"]
+
+    for field_name, key in [
+        ("city", "cities"),
+        ("neighbourhood", "neighbourhoods"),
+        ("property_type", "property_types"),
+        ("other_property_type", "other_property_types"),
+        ("room_type", "room_types"),
+    ]:
+        append_unique_memory(learning[key], snapshot.get(field_name, ""))
+
+    for amenity in snapshot.get("amenities", []) or []:
+        append_unique_memory(learning["amenities"], amenity, max_items=30)
+
+    comparison_terms = ["compare", "comparison", "better", "cheaper", "higher", "lower", "difference", "versus", "vs"]
+    if any(term in lowered_message for term in comparison_terms):
+        append_unique_memory(learning["comparison_requests"], str(user_message or ""), max_items=12)
+
+    goal_terms = ["want", "need", "prefer", "looking for", "focus on", "important", "improve"]
+    if any(term in lowered_message for term in goal_terms):
+        append_unique_memory(learning["user_goals"], str(user_message or ""), max_items=12)
+
+    return learning
+
+
+def merge_learning_memory(base_learning: dict, new_learning: dict) -> dict:
+    merged = default_chat_state()["learning"]
+    for key in merged:
+        for value in base_learning.get(key, []) if isinstance(base_learning.get(key, []), list) else []:
+            append_unique_memory(merged[key], value, max_items=30 if key == "amenities" else 20)
+        for value in new_learning.get(key, []) if isinstance(new_learning.get(key, []), list) else []:
+            append_unique_memory(merged[key], value, max_items=30 if key == "amenities" else 20)
+    return merged
+
+
+def append_chat_turn(
+    role: str,
+    content: str,
+    listing_snapshot: dict | None = None,
+    prediction_snapshot: dict | None = None,
+    explanation_snapshot: dict | None = None,
+):
+    if not has_request_context():
+        return
+
+    clean_role = str(role or "").strip().lower()
+    clean_content = str(content or "").strip()
+    if clean_role not in {"user", "assistant"} or not clean_content:
+        return
+
+    chat_state = load_chat_state()
+    history = chat_state.get("history", [])
+    if not isinstance(history, list):
+        history = []
+
+    history.append(
+        {
+            "role": clean_role,
+            "content": clean_content,
+            "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+            "listing_snapshot": listing_snapshot if isinstance(listing_snapshot, dict) else {},
+            "prediction_snapshot": prediction_snapshot if isinstance(prediction_snapshot, dict) else {},
+            "project_explanation_snapshot": explanation_snapshot if isinstance(explanation_snapshot, dict) else {},
+        }
+    )
+    chat_state["history"] = history
+
+    if clean_role == "user":
+        new_learning = extract_learning_from_turn(clean_content, listing_snapshot=listing_snapshot)
+        chat_state["learning"] = merge_learning_memory(chat_state.get("learning", {}), new_learning)
+
+    save_chat_state(chat_state)
+
+
+def get_full_chat_history() -> list[dict]:
+    history = load_chat_state().get("history", [])
+    return history if isinstance(history, list) else []
+
+
+def get_chat_history() -> list[dict]:
+    history = get_full_chat_history()
     cleaned = []
-    for item in history[-CHAT_HISTORY_LIMIT:]:
+    for item in history:
         if not isinstance(item, dict):
             continue
 
@@ -140,8 +333,9 @@ def set_chat_history(history: list[dict]):
     if not has_request_context():
         return
 
-    session["chat_history"] = history[-CHAT_HISTORY_LIMIT:]
-    session.modified = True
+    chat_state = load_chat_state()
+    chat_state["history"] = history
+    save_chat_state(chat_state)
 
 
 def clear_chat_history():
@@ -149,6 +343,15 @@ def clear_chat_history():
         return
 
     session.pop("chat_history", None)
+    session_id = str(session.get("chat_session_id", "")).strip()
+    if session_id:
+        store_path = get_chat_store_path(session_id)
+        if os.path.exists(store_path):
+            try:
+                os.remove(store_path)
+            except OSError:
+                pass
+    session.pop("chat_session_id", None)
     session.modified = True
 
 
@@ -402,7 +605,111 @@ def get_chatbot_welcome_message() -> str:
     return random.choice(get_chatbot_welcome_messages())
 
 
-def build_chatbot_system_prompt(listing_snapshot: dict | None = None, response_language: str = "English") -> str:
+def summarize_snapshot_for_history(snapshot: dict | None) -> str:
+    if not isinstance(snapshot, dict):
+        return ""
+
+    parts = []
+    for key in [
+        "city",
+        "neighbourhood",
+        "property_type",
+        "other_property_type",
+        "room_type",
+        "accommodates",
+        "bedrooms",
+        "review_scores_rating",
+        "distance_from_center_km",
+    ]:
+        value = snapshot.get(key)
+        if value not in ("", None) and value != []:
+            parts.append(f"{key}={value}")
+
+    amenities = snapshot.get("amenities", [])
+    if isinstance(amenities, list) and amenities:
+        parts.append("amenities=" + ", ".join(str(item).strip() for item in amenities[:6] if str(item).strip()))
+
+    return "; ".join(parts)
+
+
+def build_prompt_history_digest(history: list[dict]) -> str:
+    if not history:
+        return "No earlier chat history is available."
+
+    digest_lines = []
+    recent_items = history[-PROMPT_RECENT_HISTORY_LIMIT:]
+
+    for index, item in enumerate(recent_items, start=max(1, len(history) - len(recent_items) + 1)):
+        role = str(item.get("role", "")).strip().lower()
+        if role not in {"user", "assistant"}:
+            continue
+
+        content = " ".join(str(item.get("content", "")).split())
+        if not content:
+            continue
+
+        short_content = content[:280] + ("..." if len(content) > 280 else "")
+        context_bits = []
+
+        listing_summary = summarize_snapshot_for_history(item.get("listing_snapshot"))
+        if listing_summary:
+            context_bits.append(f"listing[{listing_summary}]")
+
+        prediction_snapshot = item.get("prediction_snapshot")
+        if isinstance(prediction_snapshot, dict):
+            final_price = prediction_snapshot.get("formatted_final_price_output") or prediction_snapshot.get("formatted_final_price_local")
+            city = prediction_snapshot.get("city")
+            if city or final_price:
+                context_bits.append(f"prediction[city={city or ''}; price={final_price or ''}]")
+
+        context_suffix = f" ({'; '.join(context_bits)})" if context_bits else ""
+        digest_lines.append(f"{index}. {role}: {short_content}{context_suffix}")
+
+    digest_text = "\n".join(digest_lines)
+    if len(digest_text) > PROMPT_HISTORY_CHAR_BUDGET:
+        digest_text = digest_text[-PROMPT_HISTORY_CHAR_BUDGET:]
+
+    earlier_turns = max(0, len(history) - len(recent_items))
+    if earlier_turns > 0:
+        digest_text = (
+            f"There are {earlier_turns} older turns stored before the recent transcript below. "
+            "Use the learned memory and prior context to stay consistent.\n"
+            f"{digest_text}"
+        )
+
+    return digest_text
+
+
+def build_learning_memory_summary(learning_memory: dict | None = None) -> str:
+    memory = learning_memory if isinstance(learning_memory, dict) else {}
+    labels = {
+        "cities": "Cities discussed",
+        "neighbourhoods": "Neighbourhoods discussed",
+        "property_types": "Property types discussed",
+        "other_property_types": "Specific other property types discussed",
+        "room_types": "Room types discussed",
+        "amenities": "Amenities discussed",
+        "comparison_requests": "Comparison requests",
+        "user_goals": "User goals or preferences",
+    }
+
+    lines = []
+    for key, label in labels.items():
+        values = memory.get(key, [])
+        if isinstance(values, list) and values:
+            joined = "; ".join(str(item).strip() for item in values[-8:] if str(item).strip())
+            if joined:
+                lines.append(f"{label}: {joined}")
+
+    return "\n".join(lines) if lines else "No learned preferences have been captured yet."
+
+
+def build_chatbot_system_prompt(
+    listing_snapshot: dict | None = None,
+    response_language: str = "English",
+    history: list[dict] | None = None,
+    learning_memory: dict | None = None,
+) -> str:
     snapshot = listing_snapshot or {}
     filtered_snapshot = {
         k: v
@@ -419,6 +726,8 @@ def build_chatbot_system_prompt(listing_snapshot: dict | None = None, response_l
     snapshot_text = json.dumps(filtered_snapshot, ensure_ascii=False)
     prediction_text = json.dumps(safe_prediction_snapshot, ensure_ascii=False)
     explanation_text = json.dumps(explanation_snapshot, ensure_ascii=False)
+    history_text = build_prompt_history_digest(history or [])
+    learning_text = build_learning_memory_summary(learning_memory)
     metadata_text = json.dumps(
         {
             "prediction_target": PREDICTION_TARGET,
@@ -441,7 +750,10 @@ def build_chatbot_system_prompt(listing_snapshot: dict | None = None, response_l
         "Be professional, warm, and concise. "
         "You help with anything related to this project: pricing logic, listing inputs, amenities, location effects, review score impact, minimum stay, dashboard usage, prediction interpretation, and project behavior. "
         "Stay grounded in the provided project data and configuration. "
-        "When the user asks for cheapest, best, or comparison questions, answer based on the trained model, metadata, and the current dashboard context only. "
+        "Read the stored conversation history carefully before answering. "
+        "When the user asks for cheapest, best, or comparison questions, answer by comparing the current request with earlier chat history, saved listing contexts, trained model behavior, metadata, and the current dashboard context only. "
+        "If earlier conversation contains relevant listings, preferences, or price results, explicitly use them in the comparison. "
+        "Learn from the user's prior conversation by keeping responses consistent with their earlier cities, property types, amenities, comparison requests, and goals whenever that context is relevant. "
         "Do not claim to retrieve real listings from a listings table or dataset file. "
         "When explaining a price, explicitly consider and mention distance from center, property type, room type, guest capacity, review score, amenities, and output currency whenever they are available in context. "
         "Use `final_price_local` and `final_price_output` as the effective estimate. "
@@ -454,11 +766,18 @@ def build_chatbot_system_prompt(listing_snapshot: dict | None = None, response_l
         f"Current listing form context: {snapshot_text}. "
         f"Latest prediction context: {prediction_text}. "
         f"Latest explanation context: {explanation_text}. "
+        f"Learned user memory from earlier turns: {learning_text}. "
+        f"Recent stored chat transcript and saved comparison context: {history_text}. "
         f"Project metadata context: {metadata_text}."
     )
 
 
-def request_openai_chat_response(user_message: str, history: list[dict], listing_snapshot: dict | None = None) -> str:
+def request_openai_chat_response(
+    user_message: str,
+    history: list[dict],
+    listing_snapshot: dict | None = None,
+    learning_memory: dict | None = None,
+) -> str:
     if not chatbot_is_configured():
         return "The chatbot is not configured yet. Add `OPENAI_API_KEY` to `src/.env` to enable it."
 
@@ -471,11 +790,16 @@ def request_openai_chat_response(user_message: str, history: list[dict], listing
     messages = [
         {
             "role": "system",
-            "content": build_chatbot_system_prompt(listing_snapshot, response_language=response_language),
+            "content": build_chatbot_system_prompt(
+                listing_snapshot,
+                response_language=response_language,
+                history=history,
+                learning_memory=learning_memory,
+            ),
         },
     ]
 
-    for item in history[-8:]:
+    for item in history[-PROMPT_RECENT_HISTORY_LIMIT:]:
         messages.append(
             {
                 "role": item["role"],
@@ -796,6 +1120,8 @@ def get_currency_symbol(currency_code: str) -> str:
 def format_currency_amount(amount: float, currency_code: str) -> str:
     normalized = str(currency_code or "").strip().upper()
     symbol = get_currency_symbol(normalized)
+    if normalized == "USD":
+        return f"{float(amount):,.2f} $"
     return f"{symbol}{float(amount):,.2f} ({normalized})" if normalized else f"{float(amount):,.2f}"
 
 
@@ -2025,13 +2351,13 @@ def home():
                 if OUTPUT_CURRENCY == "USD_after_prediction":
                     final_price_output = round(final_price_local * currency_rate, 2)
                     prediction_text = (
-                        f"Estimated price per night ({output_currency_label()}): "
+                        "Estimated price per night: "
                         f"{format_currency_amount(final_price_output, 'USD')}"
                     )
                 else:
                     final_price_output = final_price_local
                     prediction_text = (
-                        f"Estimated price per night ({output_currency_label()}): "
+                        "Estimated price per night: "
                         f"{format_currency_amount(final_price_output, local_currency_label)}"
                     )
 
@@ -2043,12 +2369,12 @@ def home():
 
                 if OUTPUT_CURRENCY == "USD_after_prediction":
                     total_price_text = (
-                        f"Estimated total price for minimum stay ({minimum_nights} night(s)) "
-                        f"in {output_currency_label()}: {format_currency_amount(total_price_output, 'USD')}"
+                        f"Estimated total price for minimum stay ({minimum_nights} nights): "
+                        f"{format_currency_amount(total_price_output, 'USD')}"
                     )
                 else:
                     total_price_text = (
-                        f"Estimated total price for minimum stay ({minimum_nights} night(s)): "
+                        f"Estimated total price for minimum stay ({minimum_nights} nights): "
                         f"{format_currency_amount(total_price_output, local_currency_label)}"
                     )
 
@@ -2151,18 +2477,31 @@ def chatbot():
     if not isinstance(listing_snapshot, dict):
         listing_snapshot = {}
 
-    history = get_chat_history()
+    chat_state = load_chat_state()
+    history = get_full_chat_history()
     assistant_reply = request_openai_chat_response(
         user_message=user_message,
         history=history,
         listing_snapshot=listing_snapshot,
+        learning_memory=chat_state.get("learning", {}),
     )
 
-    updated_history = history + [
-        {"role": "user", "content": user_message},
-        {"role": "assistant", "content": assistant_reply},
-    ]
-    set_chat_history(updated_history)
+    prediction_snapshot = get_prediction_snapshot()
+    explanation_snapshot = get_project_explanation_snapshot()
+    append_chat_turn(
+        role="user",
+        content=user_message,
+        listing_snapshot=listing_snapshot,
+        prediction_snapshot=prediction_snapshot,
+        explanation_snapshot=explanation_snapshot,
+    )
+    append_chat_turn(
+        role="assistant",
+        content=assistant_reply,
+        listing_snapshot=listing_snapshot,
+        prediction_snapshot=prediction_snapshot,
+        explanation_snapshot=explanation_snapshot,
+    )
 
     return jsonify(
         {

@@ -4,6 +4,8 @@ from werkzeug.datastructures import MultiDict
 
 from src.app_flask import (
     CITY_NEIGHBOURHOOD_MAP,
+    build_learning_memory_summary,
+    build_prompt_history_digest,
     build_chatbot_system_prompt,
     build_human_explanation,
     build_feature_row_from_inputs,
@@ -78,7 +80,7 @@ class ExplanationTests(unittest.TestCase):
 
         self.assertNotIn("54.37", " ".join(lines))
         self.assertIn(
-            "Calibrated estimate in local currency: $230.30 (USD).",
+            "Calibrated estimate in local currency: 230.30 $.",
             lines,
         )
 
@@ -95,6 +97,64 @@ class ExplanationTests(unittest.TestCase):
         self.assertIn("For entire houses and villas", prompt)
         self.assertIn("Never use the `$` symbol for local currency unless the local currency is actually USD.", prompt)
         self.assertIn("show each one with its currency symbol and currency code explicitly", prompt)
+
+    def test_history_digest_includes_listing_and_prediction_context(self):
+        digest = build_prompt_history_digest(
+            [
+                {
+                    "role": "user",
+                    "content": "Compare this Paris apartment with the previous villa.",
+                    "listing_snapshot": {
+                        "city": "Paris",
+                        "property_type": "Entire apartment",
+                        "room_type": "Entire place",
+                    },
+                    "prediction_snapshot": {
+                        "city": "Paris",
+                        "formatted_final_price_output": "EUR 210.00 (EUR)",
+                    },
+                }
+            ]
+        )
+
+        self.assertIn("Compare this Paris apartment with the previous villa.", digest)
+        self.assertIn("listing[city=Paris; property_type=Entire apartment; room_type=Entire place]", digest)
+        self.assertIn("prediction[city=Paris; price=EUR 210.00 (EUR)]", digest)
+
+    def test_learning_summary_lists_preferences_and_comparisons(self):
+        summary = build_learning_memory_summary(
+            {
+                "cities": ["Paris", "New York"],
+                "comparison_requests": ["Compare Paris and New York for me"],
+                "user_goals": ["I want the cheapest option with Wifi"],
+            }
+        )
+
+        self.assertIn("Cities discussed: Paris; New York", summary)
+        self.assertIn("Comparison requests: Compare Paris and New York for me", summary)
+        self.assertIn("User goals or preferences: I want the cheapest option with Wifi", summary)
+
+    def test_chatbot_prompt_includes_history_learning_and_comparison_guidance(self):
+        prompt = build_chatbot_system_prompt(
+            listing_snapshot={"city": "Paris", "property_type": "Entire apartment"},
+            response_language="English",
+            history=[
+                {
+                    "role": "user",
+                    "content": "Compare this with my last message.",
+                    "listing_snapshot": {"city": "Paris", "property_type": "Entire apartment"},
+                    "prediction_snapshot": {"city": "Paris", "formatted_final_price_output": "EUR 210.00 (EUR)"},
+                }
+            ],
+            learning_memory={
+                "cities": ["Paris"],
+                "comparison_requests": ["Compare this with my last message."],
+            },
+        )
+
+        self.assertIn("Read the stored conversation history carefully before answering.", prompt)
+        self.assertIn("Learned user memory from earlier turns:", prompt)
+        self.assertIn("Recent stored chat transcript and saved comparison context:", prompt)
 
     def test_fixed_bonus_is_positive_for_bonus_amenities(self):
         bonus = compute_fixed_amenity_bonus_local("Paris", ["Dedicated workspace", "TV"])

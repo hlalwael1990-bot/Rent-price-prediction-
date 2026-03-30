@@ -513,6 +513,10 @@ font-weight:700;
 margin:6px 0;
 line-height:1.5;
 font-size:12px;
+white-space:normal;
+overflow-wrap:anywhere;
+word-break:break-word;
+max-width:100%;
 }
 
 .result-header{
@@ -526,6 +530,8 @@ margin-top:10px;
 font-size:11px;
 color:#577060;
 line-height:1.45;
+white-space:normal;
+overflow-wrap:anywhere;
 }
 
 /* map styles */
